@@ -1,0 +1,4 @@
+cache/
+todoist-cli
+.env
+*.exe

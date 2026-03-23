@@ -1,0 +1,75 @@
+package task
+
+import (
+	"fmt"
+
+	"todoist-cli/internal/client"
+	"todoist-cli/internal/models"
+)
+
+// --- CONFIGURACIÓN DE QUERIES ---
+
+const exclusionGlobal = "& !(#Study & /Horario)"
+
+var queries = map[string]string{
+	"foco":  "today & p1 & !@reuniones",
+	"radar": "7 days & @importante",
+}
+
+type Fetcher struct {
+	Token string
+}
+
+func NewFetcher(token string) *Fetcher {
+	return &Fetcher{Token: token}
+}
+
+func (f *Fetcher) Fetch(queryName string) error {
+	queryBase, exists := queries[queryName]
+	if !exists {
+		queryBase = queryName
+	}
+
+	queryFinal := fmt.Sprintf("(%s) %s", queryBase, exclusionGlobal)
+	if exists {
+		fmt.Printf("\n🔍 Executing preset: [%s]\n", queryName)
+	} else {
+		fmt.Printf("\n🔍 Executing custom filter\n")
+	}
+	fmt.Printf("💻 Sent query: %s\n", queryFinal)
+
+	var allTasks []models.FilteredTask
+	cursor := ""
+
+	todoistClient := client.New(f.Token)
+
+	for {
+		apiResp, err := todoistClient.FilterTasks(queryFinal, cursor)
+		if err != nil {
+			return err
+		}
+
+		allTasks = append(allTasks, apiResp.Results...)
+
+		if apiResp.NextCursor == "" {
+			break
+		}
+		cursor = apiResp.NextCursor
+	}
+
+	if len(allTasks) == 0 {
+		fmt.Println("   🤷‍♂️ Inbox zero. No tasks found for this filter.")
+		return nil
+	}
+
+	fmt.Printf("   🎯 Found %d tasks:\n", len(allTasks))
+	for _, t := range allTasks {
+		dateStr := "No date"
+		if t.Due != nil {
+			dateStr = t.Due.Date
+		}
+		fmt.Printf("      👉 [%s] (P%d) %s\n", dateStr, t.Priority, t.Content)
+	}
+
+	return nil
+}
