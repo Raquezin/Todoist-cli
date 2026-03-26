@@ -44,9 +44,13 @@ func GetProjectID(token, name string) string {
 	}
 
 	if cacheBytes, err := json.MarshalIndent(cacheData, "", "    "); err == nil {
-		os.MkdirAll(filepath.Dir(CacheFile), 0755)
-		os.WriteFile(CacheFile, cacheBytes, 0644)
-		fmt.Println("💾 Project cache updated.")
+		if err := os.MkdirAll(filepath.Dir(CacheFile), 0755); err != nil {
+			fmt.Printf("⚠️ Warning: Failed to create cache directory: %v\n", err)
+		} else if err := os.WriteFile(CacheFile, cacheBytes, 0644); err != nil {
+			fmt.Printf("⚠️ Warning: Failed to write cache file: %v\n", err)
+		} else {
+			fmt.Println("💾 Project cache updated.")
+		}
 	}
 
 	return cacheData[nameLower]
@@ -55,7 +59,9 @@ func GetProjectID(token, name string) string {
 func GetAllCachedProjects() map[string]string {
 	cacheData := make(map[string]string)
 	if fileData, err := os.ReadFile(CacheFile); err == nil {
-		json.Unmarshal(fileData, &cacheData)
+		if err := json.Unmarshal(fileData, &cacheData); err != nil {
+			fmt.Printf("⚠️ Warning: Failed to unmarshal cache data: %v\n", err)
+		}
 	}
 	return cacheData
 }
@@ -83,6 +89,8 @@ func RefreshCache(token string) error {
 		return err
 	}
 
-	os.MkdirAll(filepath.Dir(CacheFile), 0755)
+	if err := os.MkdirAll(filepath.Dir(CacheFile), 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
 	return os.WriteFile(CacheFile, cacheBytes, 0644)
 }

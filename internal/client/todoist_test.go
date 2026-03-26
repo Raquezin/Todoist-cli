@@ -11,7 +11,7 @@ func TestGetProjects(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer fake-token" {
 			t.Errorf("Expected Authorization header")
 		}
-		w.Write([]byte(`{"results":[{"id":"1","name":"Test Project"},{"id":"2","name":"Another"}],"next_cursor":""}`))
+		_, _ = w.Write([]byte(`{"results":[{"id":"1","name":"Test Project"},{"id":"2","name":"Another"}],"next_cursor":""}`))
 	}))
 	defer ts.Close()
 
@@ -37,7 +37,7 @@ func TestGetProjects(t *testing.T) {
 func TestGetProjectsAPIError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"Unauthorized"}`))
+		_, _ = w.Write([]byte(`{"error":"Unauthorized"}`))
 	}))
 	defer ts.Close()
 

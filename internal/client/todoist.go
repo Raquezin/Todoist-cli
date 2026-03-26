@@ -52,7 +52,9 @@ func (c *TodoistClient) GetProjects() ([]models.Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to Todoist: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != 200 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -77,7 +79,9 @@ func (c *TodoistClient) CreateTask(task models.TaskRequest) (*models.TaskRespons
 	if err != nil {
 		return nil, fmt.Errorf("error creating task: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -104,7 +108,9 @@ func (c *TodoistClient) FilterTasks(queryFinal, cursor string) (*models.FilterRe
 	if err != nil {
 		return nil, fmt.Errorf("network error: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)

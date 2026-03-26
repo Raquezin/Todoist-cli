@@ -50,9 +50,10 @@ func FormatTask(t models.FilteredTask, now time.Time) string {
 	durStr := ""
 	if t.Duration != nil && t.Duration.Amount > 0 {
 		unitStr := t.Duration.Unit
-		if unitStr == "minute" {
+		switch unitStr {
+		case "minute":
 			unitStr = "m"
-		} else if unitStr == "hour" {
+		case "hour":
 			unitStr = "h"
 		}
 		durStr = fmt.Sprintf(" [⏱️ %d%s]", t.Duration.Amount, unitStr)

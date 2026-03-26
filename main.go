@@ -70,7 +70,7 @@ func main() {
 		desc := createCmd.String("desc", "", "Task description")
 		priority := createCmd.Int("priority", 4, "Priority 1 (Urgent) to 4 (Normal)")
 
-		createCmd.Parse(os.Args[2:])
+		_ = createCmd.Parse(os.Args[2:])
 
 		if *name == "" || *start == "" {
 			fmt.Println("❌ Error: -name and -start flags are required.")
