@@ -29,4 +29,16 @@ func TestCreatorDateParsing(t *testing.T) {
 			break
 		}
 	}
+
+	dateFormats := []string{
+		"2006-01-02",
+		"2006/01/02",
+	}
+
+	for _, format := range dateFormats {
+		_, err := time.ParseInLocation(format, "2026-03-25", c.Loc)
+		if err == nil {
+			break
+		}
+	}
 }

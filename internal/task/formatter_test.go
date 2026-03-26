@@ -19,7 +19,7 @@ func TestFormatTask(t *testing.T) {
 			name: "No date",
 			task: models.FilteredTask{
 				Content:  "Do something",
-				Priority: 1,
+				Priority: 4,
 			},
 			expected: "👉 [no date] (P1) Do something",
 		},
@@ -27,7 +27,7 @@ func TestFormatTask(t *testing.T) {
 			name: "Date only same year",
 			task: models.FilteredTask{
 				Content:  "Do something",
-				Priority: 2,
+				Priority: 3,
 				Due: &models.Due{
 					Date: "2026-03-27",
 				},
@@ -38,7 +38,7 @@ func TestFormatTask(t *testing.T) {
 			name: "Date only different year",
 			task: models.FilteredTask{
 				Content:  "Do something",
-				Priority: 3,
+				Priority: 2,
 				Due: &models.Due{
 					Date: "2027-03-27",
 				},
@@ -49,7 +49,7 @@ func TestFormatTask(t *testing.T) {
 			name: "Datetime same year",
 			task: models.FilteredTask{
 				Content:  "Meeting",
-				Priority: 1,
+				Priority: 4,
 				Due: &models.Due{
 					Datetime: "2026-03-27T14:30:00Z",
 				},
@@ -60,7 +60,7 @@ func TestFormatTask(t *testing.T) {
 			name: "Datetime different year",
 			task: models.FilteredTask{
 				Content:  "Meeting next year",
-				Priority: 1,
+				Priority: 4,
 				Due: &models.Due{
 					Datetime: "2027-03-27T14:30:00Z",
 				},
@@ -71,7 +71,7 @@ func TestFormatTask(t *testing.T) {
 			name: "With duration minutes",
 			task: models.FilteredTask{
 				Content:  "Meeting",
-				Priority: 1,
+				Priority: 4,
 				Due: &models.Due{
 					Datetime: "2026-03-27T14:30:00Z",
 				},
@@ -86,7 +86,7 @@ func TestFormatTask(t *testing.T) {
 			name: "With duration hours",
 			task: models.FilteredTask{
 				Content:  "Deep Work",
-				Priority: 1,
+				Priority: 4,
 				Due: &models.Due{
 					Date: "2026-03-27",
 				},

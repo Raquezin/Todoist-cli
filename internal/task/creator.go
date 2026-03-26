@@ -30,8 +30,14 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	var startDt time.Time
 	var err error
 
-	// Lista de formatos soportados, desde el más fácil al más estricto ISO
-	formats := []string{
+	// Formatos de solo fecha
+	dateOnlyFormats := []string{
+		"2006-01-02",
+		"2006/01/02",
+	}
+
+	// Lista de formatos con hora soportados
+	timeFormats := []string{
 		"2006-01-02 15:04",
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04",
@@ -40,36 +46,66 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	}
 
 	parsed := false
-	for _, format := range formats {
+	hasTime := false
+
+	for _, format := range timeFormats {
 		if t, errParse := time.ParseInLocation(format, startStr, c.Loc); errParse == nil {
 			startDt = t
 			parsed = true
+			hasTime = true
 			break
 		}
 	}
 
 	if !parsed {
-		return fmt.Errorf("invalid date format: '%s'. Use 'YYYY-MM-DD HH:MM' (e.g. 2026-03-25 17:00)", startStr)
+		for _, format := range dateOnlyFormats {
+			if t, errParse := time.ParseInLocation(format, startStr, c.Loc); errParse == nil {
+				startDt = t
+				parsed = true
+				hasTime = false
+				break
+			}
+		}
 	}
 
-	endDt := startDt.Add(time.Duration(duration) * time.Minute)
-
-	// Recuperamos la "magia" del calendario
-	title := fmt.Sprintf("%s (%s - %s)", name, startDt.Format("15:04"), endDt.Format("15:04"))
+	if !parsed {
+		return fmt.Errorf("invalid date format: '%s'. Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM'", startStr)
+	}
 
 	projectID := cache.GetProjectID(c.Token, projectName)
 	if projectID == "" && projectName != "" {
 		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", projectName)
 	}
 
+	title := name
+
+	// Mapear prioridad (UI de Todoist: 1 es urgente, API: 4 es urgente)
+	apiPriority := 5 - priority
+	if apiPriority < 1 {
+		apiPriority = 1
+	} else if apiPriority > 4 {
+		apiPriority = 4
+	}
+
 	taskReq := models.TaskRequest{
-		Content:     title,
-		DueDatetime: startDt.Format(time.RFC3339),
 		ProjectID:   projectID,
 		Labels:      labels,
 		Description: description,
-		Priority:    priority,
+		Priority:    apiPriority,
 	}
+
+	if hasTime {
+		endDt := startDt.Add(time.Duration(duration) * time.Minute)
+		// Recuperamos la "magia" del calendario
+		title = fmt.Sprintf("%s (%s - %s)", name, startDt.Format("15:04"), endDt.Format("15:04"))
+		taskReq.DueDatetime = startDt.Format(time.RFC3339)
+		taskReq.Duration = duration
+		taskReq.DurationUnit = "minute"
+	} else {
+		taskReq.DueDate = startDt.Format("2006-01-02")
+	}
+
+	taskReq.Content = title
 
 	todoistClient := client.New(c.Token)
 	taskRes, err := todoistClient.CreateTask(taskReq)

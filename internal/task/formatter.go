@@ -58,5 +58,12 @@ func FormatTask(t models.FilteredTask, now time.Time) string {
 		durStr = fmt.Sprintf(" [⏱️ %d%s]", t.Duration.Amount, unitStr)
 	}
 
-	return fmt.Sprintf("👉 [%s] (P%d) %s%s", dateStr, t.Priority, t.Content, durStr)
+	uiPriority := 5 - t.Priority
+	if uiPriority < 1 {
+		uiPriority = 1
+	} else if uiPriority > 4 {
+		uiPriority = 4
+	}
+
+	return fmt.Sprintf("👉 [%s] (P%d) %s%s", dateStr, uiPriority, t.Content, durStr)
 }

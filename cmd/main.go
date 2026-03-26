@@ -25,7 +25,7 @@ EXAMPLES:
 
 1. Create a task (Calendar Magic):
    The command will automatically append the time block to the title, e.g., "Meeting (17:00 - 18:00)"
-   go run cmd/main.go create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 4
+   go run cmd/main.go create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 1
 
 2. Fetch tasks (Presets):
    go run cmd/main.go fetch foco    # Today's priority 1 tasks, excluding meetings
@@ -41,7 +41,7 @@ For more details, check the README.md file.`)
 func main() {
 	_ = godotenv.Load()
 	token := os.Getenv("TODOIST_API_TOKEN")
-	
+
 	if len(os.Args) >= 2 && (os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h") {
 		printHelp()
 		os.Exit(0)
@@ -63,18 +63,18 @@ func main() {
 	case "create":
 		createCmd := flag.NewFlagSet("create", flag.ExitOnError)
 		name := createCmd.String("name", "", "Task name (Required)")
-		start := createCmd.String("start", "", "Start date, e.g. '2026-03-25 17:00' (Required)")
+		start := createCmd.String("start", "", "Start date, e.g. '2026-03-25' or '2026-03-25 17:00' (Required)")
 		duration := createCmd.Int("duration", 60, "Duration in minutes (default 60)")
 		project := createCmd.String("project", "", "Project name")
 		labelsIn := createCmd.String("labels", "", "Comma-separated labels (e.g. important,coding)")
 		desc := createCmd.String("desc", "", "Task description")
-		priority := createCmd.Int("priority", 1, "Priority 1 (Normal) to 4 (Urgent)")
+		priority := createCmd.Int("priority", 4, "Priority 1 (Urgent) to 4 (Normal)")
 
 		createCmd.Parse(os.Args[2:])
 
 		if *name == "" || *start == "" {
 			fmt.Println("❌ Error: -name and -start flags are required.")
-			fmt.Println("Usage: go run cmd/main.go create -name \"Task\" -start \"YYYY-MM-DD HH:MM\"")
+			fmt.Println("Usage: go run cmd/main.go create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\"")
 			os.Exit(1)
 		}
 

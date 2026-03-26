@@ -14,6 +14,7 @@ type TaskRequest struct {
 	Content      string   `json:"content"`
 	DueString    string   `json:"due_string,omitempty"`
 	DueDatetime  string   `json:"due_datetime,omitempty"`
+	DueDate      string   `json:"due_date,omitempty"`
 	ProjectID    string   `json:"project_id,omitempty"`
 	Labels       []string `json:"labels,omitempty"`
 	Description  string   `json:"description,omitempty"`
@@ -23,13 +24,13 @@ type TaskRequest struct {
 }
 
 type TaskResponse struct {
-	Content     string   `json:"content"`
-	Description string   `json:"description,omitempty"`
-	ProjectID   string   `json:"project_id,omitempty"`
-	Labels      []string `json:"labels,omitempty"`
-	Priority    int      `json:"priority,omitempty"`
-	DueDatetime string   `json:"due_datetime,omitempty"`
-	Duration    int      `json:"duration,omitempty"`
+	Content     string    `json:"content"`
+	Description string    `json:"description,omitempty"`
+	ProjectID   string    `json:"project_id,omitempty"`
+	Labels      []string  `json:"labels,omitempty"`
+	Priority    int       `json:"priority,omitempty"`
+	DueDatetime string    `json:"due_datetime,omitempty"`
+	Duration    *Duration `json:"duration,omitempty"`
 }
 
 type Due struct {
