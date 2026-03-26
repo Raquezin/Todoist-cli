@@ -1,4 +1,4 @@
-cache/
+.cache/
 todoist-cli
 .env
 *.exe
