@@ -14,7 +14,7 @@ func printHelp() {
 	fmt.Println(`🤖 Todoist CLI - Your terminal Todoist assistant
 
 USAGE:
-  go run cmd/main.go <command> [options]
+  ./todoist-cli <command> [options]
 
 AVAILABLE COMMANDS:
   create    Create a new task in Todoist with Calendar-friendly formatting
@@ -25,15 +25,15 @@ EXAMPLES:
 
 1. Create a task (Calendar Magic):
    The command will automatically append the time block to the title, e.g., "Meeting (17:00 - 18:00)"
-   go run cmd/main.go create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 1
+   ./todoist-cli create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 1
 
 2. Fetch tasks (Presets):
-   go run cmd/main.go fetch foco    # Today's priority 1 tasks, excluding meetings
-   go run cmd/main.go fetch radar   # Next 7 days, important tasks
+   ./todoist-cli fetch foco    # Today's priority 1 tasks, excluding meetings
+   ./todoist-cli fetch radar   # Next 7 days, important tasks
 
 3. Fetch tasks (Raw Todoist Filter):
-   go run cmd/main.go fetch "today & #Work"
-   go run cmd/main.go fetch "p1 & overdue"
+   ./todoist-cli fetch "today & #Work"
+   ./todoist-cli fetch "p1 & overdue"
 
 For more details, check the README.md file.`)
 }
@@ -74,7 +74,7 @@ func main() {
 
 		if *name == "" || *start == "" {
 			fmt.Println("❌ Error: -name and -start flags are required.")
-			fmt.Println("Usage: go run cmd/main.go create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\"")
+			fmt.Println("Usage: ./todoist-cli create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\"")
 			os.Exit(1)
 		}
 
@@ -94,8 +94,8 @@ func main() {
 	case "fetch":
 		if len(os.Args) < 3 {
 			fmt.Println("❌ Error: A command or filter is required for fetch.")
-			fmt.Println("Example: go run cmd/main.go fetch foco")
-			fmt.Println("Example: go run cmd/main.go fetch \"today & #Work\"")
+			fmt.Println("Example: ./todoist-cli fetch foco")
+			fmt.Println("Example: ./todoist-cli fetch \"today & #Work\"")
 			os.Exit(1)
 		}
 		queryName := os.Args[2]

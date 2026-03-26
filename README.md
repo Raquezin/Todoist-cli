@@ -18,7 +18,7 @@ A powerful and user-friendly command-line interface for Todoist, designed specif
    ```
 3. Build the CLI:
    ```bash
-   go build -o todoist-cli cmd/main.go
+   go build -o todoist-cli .
    ```
 4. Create a `.env` file in the root directory and add your Todoist API token:
    ```env
@@ -37,7 +37,7 @@ The CLI offers an intuitive set of subcommands. You can always view the quick gu
 Use the `create` subcommand to add new tasks. The title will automatically be appended with the duration block for Calendar integrations.
 
 ```bash
-./todoist-cli create -name "Learn Go" -start "2026-03-25 17:00" -duration 120 -project "Learning" -labels "coding,focus" -priority 4
+./todoist-cli create -name "Learn Go" -start "2026-03-25 17:00" -duration 120 -project "Learning" -labels "coding,focus" -priority 1
 ```
 
 **Required flags:**
@@ -49,7 +49,7 @@ Use the `create` subcommand to add new tasks. The title will automatically be ap
 - `-project`: Target project name (it will be fuzzy-matched locally). If omitted, goes to Inbox.
 - `-labels`: Comma-separated labels (e.g., `important,coding`).
 - `-desc`: Task description text.
-- `-priority`: Priority level (1-4). `1` is Normal, `4` is Urgent/Red.
+- `-priority`: Priority level (1-4). `1` is Urgent/Red, `4` is Normal.
 
 ### 2. Fetching Tasks (`fetch`)
 
@@ -74,7 +74,7 @@ If the keyword is not a preset, the CLI treats it as a raw Todoist query string!
 
 ## 📂 Project Structure
 
-- `cmd/main.go`: Main entry point and CLI flag parsing
+- `main.go`: Main entry point and CLI flag parsing
 - `internal/task/`: Core logic for task creation (Calendar magic) and dynamic fetching
 - `internal/client/`: Unified Todoist REST API client
 - `internal/cache/`: Local filesystem caching for quick Project ID lookups
