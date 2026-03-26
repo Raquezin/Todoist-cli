@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"time"
 
 	"todoist-cli/internal/client"
 	"todoist-cli/internal/models"
@@ -63,12 +64,9 @@ func (f *Fetcher) Fetch(queryName string) error {
 	}
 
 	fmt.Printf("   🎯 Found %d tasks:\n", len(allTasks))
+	now := time.Now()
 	for _, t := range allTasks {
-		dateStr := "No date"
-		if t.Due != nil {
-			dateStr = t.Due.Date
-		}
-		fmt.Printf("      👉 [%s] (P%d) %s\n", dateStr, t.Priority, t.Content)
+		fmt.Printf("      %s\n", FormatTask(t, now))
 	}
 
 	return nil

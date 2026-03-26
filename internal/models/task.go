@@ -38,13 +38,19 @@ type Due struct {
 	Timezone string `json:"timezone,omitempty"`
 }
 
+type Duration struct {
+	Amount int    `json:"amount"`
+	Unit   string `json:"unit"`
+}
+
 type FilteredTask struct {
-	ID        string   `json:"id"`
-	ProjectID string   `json:"project_id"`
-	Content   string   `json:"content"`
-	Priority  int      `json:"priority"`
-	Labels    []string `json:"labels"`
-	Due       *Due     `json:"due,omitempty"`
+	ID        string    `json:"id"`
+	ProjectID string    `json:"project_id"`
+	Content   string    `json:"content"`
+	Priority  int       `json:"priority"`
+	Labels    []string  `json:"labels"`
+	Due       *Due      `json:"due,omitempty"`
+	Duration  *Duration `json:"duration,omitempty"`
 }
 
 type FilterResponse struct {
