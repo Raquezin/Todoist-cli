@@ -31,10 +31,12 @@ func (f *Fetcher) Fetch(queryName string) error {
 		queryBase = queryName
 	}
 
-	queryFinal := fmt.Sprintf("(%s) %s", queryBase, exclusionGlobal)
+	var queryFinal string
 	if exists {
+		queryFinal = fmt.Sprintf("(%s) %s", queryBase, exclusionGlobal)
 		fmt.Printf("\n🔍 Executing preset: [%s]\n", queryName)
 	} else {
+		queryFinal = queryBase
 		fmt.Printf("\n🔍 Executing custom filter\n")
 	}
 	fmt.Printf("💻 Sent query: %s\n", queryFinal)

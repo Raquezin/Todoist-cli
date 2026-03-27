@@ -20,7 +20,11 @@ A powerful and user-friendly command-line interface for Todoist, designed specif
    ```bash
    go build -o todoist-cli .
    ```
-4. Create a `.env` file in the root directory and add your Todoist API token:
+4. Set your Todoist API token via environment variable or `.env` file:
+   ```bash
+   export TODOIST_API_TOKEN=your_todoist_token_here
+   ```
+   Or create a `.env` file in the root directory:
    ```env
    TODOIST_API_TOKEN=your_todoist_token_here
    ```
@@ -42,7 +46,7 @@ Use the `create` subcommand to add new tasks. The title will automatically be ap
 
 **Required flags:**
 - `-name`: Task name (e.g., "Review PRs")
-- `-start`: Start date and time. It accepts multiple formats, but `YYYY-MM-DD HH:MM` is recommended (e.g., `2026-03-25 17:00`)
+- `-start`: Start date. Accepts `YYYY-MM-DD` for all-day tasks or `YYYY-MM-DD HH:MM` to include a time block (e.g., `2026-03-25` or `2026-03-25 17:00`).
 
 **Optional flags:**
 - `-duration`: Duration in minutes. Default is `60`. This is used to calculate the end time in the title.
@@ -82,5 +86,5 @@ If the keyword is not a preset, the CLI treats it as a raw Todoist query string!
 
 ## 🛠️ Built With
 
-- Go 1.21+
+- Go 1.26.1+
 - [godotenv](https://github.com/joho/godotenv) (for loading `.env` securely)
