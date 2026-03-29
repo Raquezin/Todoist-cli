@@ -64,17 +64,25 @@ func main() {
 		createCmd := flag.NewFlagSet("create", flag.ExitOnError)
 		name := createCmd.String("name", "", "Task name (Required)")
 		start := createCmd.String("start", "", "Start date, e.g. '2026-03-25' or '2026-03-25 17:00' (Required)")
-		duration := createCmd.Int("duration", 60, "Duration in minutes (default 60)")
+		duration := createCmd.Int("duration", 0, "Duration in minutes (optional)")
 		project := createCmd.String("project", "", "Project name")
 		labelsIn := createCmd.String("labels", "", "Comma-separated labels (e.g. important,coding)")
 		desc := createCmd.String("desc", "", "Task description")
 		priority := createCmd.Int("priority", 4, "Priority 1 (Urgent) to 4 (Normal)")
 
-		_ = createCmd.Parse(os.Args[2:])
+		if err := createCmd.Parse(os.Args[2:]); err != nil {
+			fmt.Printf("❌ Error: %v\n", err)
+			os.Exit(1)
+		}
 
 		if *name == "" || *start == "" {
 			fmt.Println("❌ Error: -name and -start flags are required.")
 			fmt.Println("Usage: ./todoist-cli create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\"")
+			os.Exit(1)
+		}
+
+		if *priority < 1 || *priority > 4 {
+			fmt.Println("❌ Error: -priority must be between 1 (Urgent) and 4 (Normal).")
 			os.Exit(1)
 		}
 

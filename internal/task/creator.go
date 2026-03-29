@@ -28,7 +28,6 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	// Intentar parsear con un formato mucho más sencillo y amigable
 	startStr = strings.TrimSpace(startStr)
 	var startDt time.Time
-	var err error
 
 	// Formatos de solo fecha
 	dateOnlyFormats := []string{
@@ -77,8 +76,6 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", projectName)
 	}
 
-	title := name
-
 	// Mapear prioridad (UI de Todoist: 1 es urgente, API: 4 es urgente)
 	apiPriority := 5 - priority
 	if apiPriority < 1 {
@@ -88,6 +85,7 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	}
 
 	taskReq := models.TaskRequest{
+		Content:     name,
 		ProjectID:   projectID,
 		Labels:      labels,
 		Description: description,
@@ -95,17 +93,14 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	}
 
 	if hasTime {
-		endDt := startDt.Add(time.Duration(duration) * time.Minute)
-		// Recuperamos la "magia" del calendario
-		title = fmt.Sprintf("%s (%s - %s)", name, startDt.Format("15:04"), endDt.Format("15:04"))
 		taskReq.DueDatetime = startDt.Format(time.RFC3339)
-		taskReq.Duration = duration
-		taskReq.DurationUnit = "minute"
+		if duration > 0 {
+			taskReq.Duration = duration
+			taskReq.DurationUnit = "minute"
+		}
 	} else {
 		taskReq.DueDate = startDt.Format("2006-01-02")
 	}
-
-	taskReq.Content = title
 
 	todoistClient := client.New(c.Token)
 	taskRes, err := todoistClient.CreateTask(taskReq)
