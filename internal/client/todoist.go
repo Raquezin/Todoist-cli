@@ -27,14 +27,7 @@ func New(token string) *TodoistClient {
 }
 
 func (c *TodoistClient) doRequest(method, endpoint string, body []byte) (*http.Response, error) {
-	var req *http.Request
-	var err error
-	if body != nil {
-		req, err = http.NewRequest(method, BaseURL+endpoint, bytes.NewBuffer(body))
-	} else {
-		req, err = http.NewRequest(method, BaseURL+endpoint, nil)
-	}
-
+	req, err := http.NewRequest(method, BaseURL+endpoint, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +49,7 @@ func (c *TodoistClient) GetProjects() ([]models.Project, error) {
 		_ = resp.Body.Close()
 	}()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("API error (%d): %s", resp.StatusCode, string(bodyBytes))
 	}

@@ -8,63 +8,113 @@ import (
 	"todoist-cli/internal/models"
 )
 
-// FormatTask formats a FilteredTask into a readable string representation
-// including its date, priority, content, and duration.
-func FormatTask(t models.FilteredTask, now time.Time) string {
-	dateStr := "no date"
-	if t.Due != nil {
-		var parsed time.Time
-		var err error
+const maxDateLen = 35
 
-		dateVal := t.Due.Datetime
-		if dateVal == "" {
-			dateVal = t.Due.Date
-		}
+func formatDue(due *models.Due, now time.Time) string {
+	if due == nil {
+		return "-"
+	}
 
-		// Try to parse as RFC3339 first
-		parsed, err = time.Parse(time.RFC3339, dateVal)
-		if err != nil {
-			// Fallback to simple date
-			parsed, err = time.Parse("2006-01-02", dateVal)
-		}
+	dateVal := due.Datetime
+	if dateVal == "" {
+		dateVal = due.Date
+	}
 
-		if err == nil {
-			if parsed.Year() != now.Year() {
-				if parsed.Hour() == 0 && parsed.Minute() == 0 && parsed.Second() == 0 && t.Due.Datetime == "" {
-					dateStr = strings.ToLower(parsed.Format("02 Jan 2006"))
-				} else {
-					dateStr = strings.ToLower(parsed.Format("02 Jan 2006 15:04"))
-				}
+	parsed, err := time.Parse(time.RFC3339, dateVal)
+	if err != nil {
+		parsed, err = time.Parse("2006-01-02", dateVal)
+	}
+
+	if err == nil {
+		hasTime := due.Datetime != ""
+		var fmtStr string
+		if parsed.Year() != now.Year() {
+			if hasTime {
+				fmtStr = "02 Jan 2006 15:04"
 			} else {
-				if parsed.Hour() == 0 && parsed.Minute() == 0 && parsed.Second() == 0 && t.Due.Datetime == "" {
-					dateStr = strings.ToLower(parsed.Format("02 Jan"))
-				} else {
-					dateStr = strings.ToLower(parsed.Format("02 Jan 15:04"))
-				}
+				fmtStr = "02 Jan 2006"
 			}
 		} else {
-			dateStr = dateVal
+			if hasTime {
+				fmtStr = "02 Jan 15:04"
+			} else {
+				fmtStr = "02 Jan"
+			}
 		}
+		return strings.ToLower(parsed.Format(fmtStr))
 	}
 
-	durStr := ""
-	if t.Duration != nil && t.Duration.Amount > 0 {
-		unitStr := t.Duration.Unit
-		switch unitStr {
-		case "minute":
-			unitStr = "m"
-		case "hour":
-			unitStr = "h"
+	if due.String != "" {
+		s := due.String
+		if len(s) > maxDateLen {
+			s = s[:maxDateLen-3] + "..."
 		}
-		durStr = fmt.Sprintf(" [⏱️ %d%s]", t.Duration.Amount, unitStr)
+		return s
+	}
+	if dateVal != "" {
+		return dateVal
+	}
+	return "-"
+}
+
+func formatLabels(labels []string) string {
+	if len(labels) == 0 {
+		return ""
+	}
+	parts := make([]string, len(labels))
+	for i, l := range labels {
+		parts[i] = "@" + l
+	}
+	return strings.Join(parts, " ")
+}
+
+func formatDuration(dur *models.Duration) string {
+	if dur == nil || dur.Amount <= 0 {
+		return ""
+	}
+	unit := dur.Unit
+	switch unit {
+	case "minute":
+		unit = "m"
+	case "hour":
+		unit = "h"
+	}
+	return fmt.Sprintf("%d%s", dur.Amount, unit)
+}
+
+// FormatTask formats a FilteredTask into a readable string.
+// projectMap maps project IDs to project names.
+func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]string) string {
+	content := t.Content
+	date := formatDue(t.Due, now)
+	priority := fmt.Sprintf("P%d", models.ToUIPriority(t.Priority))
+
+	project := projectMap[t.ProjectID]
+	if project == "" {
+		project = "Inbox"
 	}
 
-	uiPriority := 5 - t.Priority
-	if uiPriority < 1 {
-		uiPriority = 1
-	} else if uiPriority > 4 {
-		uiPriority = 4
+	labels := formatLabels(t.Labels)
+	duration := formatDuration(t.Duration)
+
+	var b strings.Builder
+	b.WriteString(content)
+	b.WriteString(" | ")
+	b.WriteString(date)
+	b.WriteString(" | ")
+	b.WriteString(priority)
+	b.WriteString(" | ")
+	b.WriteString(project)
+
+	if labels != "" {
+		b.WriteString(" | ")
+		b.WriteString(labels)
 	}
 
-	return fmt.Sprintf("👉 [%s] (P%d) %s%s", dateStr, uiPriority, t.Content, durStr)
+	if duration != "" {
+		b.WriteString(" | ")
+		b.WriteString(duration)
+	}
+
+	return b.String()
 }

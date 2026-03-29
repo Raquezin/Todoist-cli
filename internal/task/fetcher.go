@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"todoist-cli/internal/cache"
 	"todoist-cli/internal/client"
 	"todoist-cli/internal/models"
 )
@@ -66,9 +67,16 @@ func (f *Fetcher) Fetch(queryName string) error {
 	}
 
 	fmt.Printf("   🎯 Found %d tasks:\n", len(allTasks))
+
+	nameToID := cache.GetAllCachedProjects()
+	projectMap := make(map[string]string, len(nameToID))
+	for name, id := range nameToID {
+		projectMap[id] = name
+	}
+
 	now := time.Now()
 	for _, t := range allTasks {
-		fmt.Printf("      %s\n", FormatTask(t, now))
+		fmt.Printf("      %s\n", FormatTask(t, now, projectMap))
 	}
 
 	return nil

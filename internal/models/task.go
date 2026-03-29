@@ -36,6 +36,7 @@ type TaskResponse struct {
 type Due struct {
 	Date     string `json:"date"`
 	Datetime string `json:"datetime,omitempty"`
+	String   string `json:"string,omitempty"`
 	Timezone string `json:"timezone,omitempty"`
 }
 
@@ -57,4 +58,28 @@ type FilteredTask struct {
 type FilterResponse struct {
 	Results    []FilteredTask `json:"results"`
 	NextCursor string         `json:"next_cursor,omitempty"`
+}
+
+// ToAPIPriority converts UI priority (1=Urgent, 4=Normal) to Todoist API priority (4=Urgent, 1=Normal).
+func ToAPIPriority(ui int) int {
+	p := 5 - ui
+	if p < 1 {
+		return 1
+	}
+	if p > 4 {
+		return 4
+	}
+	return p
+}
+
+// ToUIPriority converts Todoist API priority (4=Urgent, 1=Normal) to UI priority (1=Urgent, 4=Normal).
+func ToUIPriority(api int) int {
+	p := 5 - api
+	if p < 1 {
+		return 1
+	}
+	if p > 4 {
+		return 4
+	}
+	return p
 }

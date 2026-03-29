@@ -76,20 +76,12 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", projectName)
 	}
 
-	// Mapear prioridad (UI de Todoist: 1 es urgente, API: 4 es urgente)
-	apiPriority := 5 - priority
-	if apiPriority < 1 {
-		apiPriority = 1
-	} else if apiPriority > 4 {
-		apiPriority = 4
-	}
-
 	taskReq := models.TaskRequest{
 		Content:     name,
 		ProjectID:   projectID,
 		Labels:      labels,
 		Description: description,
-		Priority:    apiPriority,
+		Priority:    models.ToAPIPriority(priority),
 	}
 
 	if hasTime {

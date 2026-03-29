@@ -23,9 +23,9 @@ AVAILABLE COMMANDS:
 
 EXAMPLES:
 
-1. Create a task (Calendar Magic):
-   The command will automatically append the time block to the title, e.g., "Meeting (17:00 - 18:00)"
+1. Create a task:
    ./todoist-cli create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 1
+   ./todoist-cli create -name "Buy milk" -start "2026-03-25"
 
 2. Fetch tasks (Presets):
    ./todoist-cli fetch foco    # Today's priority 1 tasks, excluding meetings
