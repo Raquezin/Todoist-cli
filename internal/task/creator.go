@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -11,31 +12,35 @@ import (
 )
 
 type Creator struct {
-	Token string
-	Loc   *time.Location
+	Client *client.TodoistClient
+	Loc    *time.Location
 }
 
-func NewCreator(token string) *Creator {
-	loc, err := time.LoadLocation("Europe/Madrid")
-	if err != nil {
-		fmt.Printf("❌ Error loading timezone: %v\n", err)
+func NewCreator(apiClient *client.TodoistClient) *Creator {
+	tz := os.Getenv("TZ")
+	var loc *time.Location
+	var err error
+
+	if tz != "" {
+		loc, err = time.LoadLocation(tz)
+	}
+
+	if loc == nil || err != nil {
 		loc = time.Local
 	}
-	return &Creator{Token: token, Loc: loc}
+
+	return &Creator{Client: apiClient, Loc: loc}
 }
 
 func (c *Creator) Create(name, startStr string, duration int, projectName string, labels []string, description string, priority int) error {
-	// Intentar parsear con un formato mucho más sencillo y amigable
 	startStr = strings.TrimSpace(startStr)
 	var startDt time.Time
 
-	// Formatos de solo fecha
 	dateOnlyFormats := []string{
 		"2006-01-02",
 		"2006/01/02",
 	}
 
-	// Lista de formatos con hora soportados
 	timeFormats := []string{
 		"2006-01-02 15:04",
 		"2006-01-02 15:04:05",
@@ -71,7 +76,19 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 		return fmt.Errorf("invalid date format: '%s'. Use 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM'", startStr)
 	}
 
-	projectID := cache.GetProjectID(c.Token, projectName)
+	if duration > 0 && !hasTime {
+		return fmt.Errorf("duration cannot be used with an all-day task (specify a time like 'YYYY-MM-DD HH:MM')")
+	}
+
+	if priority < 1 || priority > 4 {
+		return fmt.Errorf("priority must be between 1 (Urgent) and 4 (Normal)")
+	}
+
+	if duration < 0 {
+		return fmt.Errorf("duration must be a positive integer")
+	}
+
+	projectID := cache.GetProjectID(c.Client, projectName)
 	if projectID == "" && projectName != "" {
 		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", projectName)
 	}
@@ -94,8 +111,7 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 		taskReq.DueDate = startDt.Format("2006-01-02")
 	}
 
-	todoistClient := client.New(c.Token)
-	taskRes, err := todoistClient.CreateTask(taskReq)
+	taskRes, err := c.Client.CreateTask(taskReq)
 	if err != nil {
 		return fmt.Errorf("failed to create task: %w", err)
 	}

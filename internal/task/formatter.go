@@ -15,18 +15,25 @@ func formatDue(due *models.Due, now time.Time) string {
 		return "-"
 	}
 
-	dateVal := due.Datetime
-	if dateVal == "" {
-		dateVal = due.Date
+	var parsed time.Time
+	var err error
+	hasTime := false
+
+	if due.Datetime != "" {
+		parsed, err = time.Parse(time.RFC3339, due.Datetime)
+		if err == nil {
+			hasTime = true
+		}
 	}
 
-	parsed, err := time.Parse(time.RFC3339, dateVal)
-	if err != nil {
-		parsed, err = time.Parse("2006-01-02", dateVal)
+	if (err != nil || due.Datetime == "") && due.Date != "" {
+		parsed, err = time.Parse("2006-01-02", due.Date)
+		if err == nil {
+			hasTime = false
+		}
 	}
 
-	if err == nil {
-		hasTime := due.Datetime != ""
+	if err == nil && !parsed.IsZero() {
 		var fmtStr string
 		if parsed.Year() != now.Year() {
 			if hasTime {
@@ -41,7 +48,7 @@ func formatDue(due *models.Due, now time.Time) string {
 				fmtStr = "02 Jan"
 			}
 		}
-		return strings.ToLower(parsed.Format(fmtStr))
+		return parsed.Format(fmtStr)
 	}
 
 	if due.String != "" {
@@ -51,7 +58,15 @@ func formatDue(due *models.Due, now time.Time) string {
 		}
 		return s
 	}
+
+	dateVal := due.Datetime
+	if dateVal == "" {
+		dateVal = due.Date
+	}
 	if dateVal != "" {
+		if len(dateVal) > maxDateLen {
+			dateVal = dateVal[:maxDateLen-3] + "..."
+		}
 		return dateVal
 	}
 	return "-"
@@ -85,7 +100,9 @@ func formatDuration(dur *models.Duration) string {
 // FormatTask formats a FilteredTask into a readable string.
 // projectMap maps project IDs to project names.
 func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]string) string {
-	content := t.Content
+	content := strings.ReplaceAll(t.Content, "|", "¦")
+	content = strings.ReplaceAll(content, "\n", " ")
+	content = strings.ReplaceAll(content, "\r", "")
 	date := formatDue(t.Due, now)
 	priority := fmt.Sprintf("P%d", models.ToUIPriority(t.Priority))
 
@@ -112,7 +129,7 @@ func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]stri
 	}
 
 	if duration != "" {
-		b.WriteString(" | ")
+		b.WriteString(" | ⏱ ")
 		b.WriteString(duration)
 	}
 

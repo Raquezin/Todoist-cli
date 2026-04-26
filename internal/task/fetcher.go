@@ -12,6 +12,7 @@ import (
 // --- CONFIGURACIÓN DE QUERIES ---
 
 const exclusionGlobal = "& !(#Study & /Horario)"
+const maxPages = 20
 
 var queries = map[string]string{
 	"foco":  "today & p1 & !@reuniones",
@@ -19,11 +20,11 @@ var queries = map[string]string{
 }
 
 type Fetcher struct {
-	Token string
+	Client *client.TodoistClient
 }
 
-func NewFetcher(token string) *Fetcher {
-	return &Fetcher{Token: token}
+func NewFetcher(apiClient *client.TodoistClient) *Fetcher {
+	return &Fetcher{Client: apiClient}
 }
 
 func (f *Fetcher) Fetch(queryName string) error {
@@ -44,11 +45,15 @@ func (f *Fetcher) Fetch(queryName string) error {
 
 	var allTasks []models.FilteredTask
 	cursor := ""
-
-	todoistClient := client.New(f.Token)
+	pageCount := 0
 
 	for {
-		apiResp, err := todoistClient.FilterTasks(queryFinal, cursor)
+		if pageCount >= maxPages {
+			fmt.Printf("⚠️ Warning: Reached maximum pagination limit (%d pages). Some tasks might be missing.\n", maxPages)
+			break
+		}
+
+		apiResp, err := f.Client.FilterTasks(queryFinal, cursor)
 		if err != nil {
 			return err
 		}
@@ -59,6 +64,7 @@ func (f *Fetcher) Fetch(queryName string) error {
 			break
 		}
 		cursor = apiResp.NextCursor
+		pageCount++
 	}
 
 	if len(allTasks) == 0 {
@@ -68,15 +74,11 @@ func (f *Fetcher) Fetch(queryName string) error {
 
 	fmt.Printf("   🎯 Found %d tasks:\n", len(allTasks))
 
-	nameToID := cache.GetAllCachedProjects()
-	projectMap := make(map[string]string, len(nameToID))
-	for name, id := range nameToID {
-		projectMap[id] = name
-	}
+	idToName := cache.GetAllCachedProjects()
 
 	now := time.Now()
 	for _, t := range allTasks {
-		fmt.Printf("      %s\n", FormatTask(t, now, projectMap))
+		fmt.Printf("      %s\n", FormatTask(t, now, idToName))
 	}
 
 	return nil

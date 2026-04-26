@@ -49,7 +49,7 @@ Use the `create` subcommand to add new tasks. The title will automatically be ap
 - `-start`: Start date. Accepts `YYYY-MM-DD` for all-day tasks or `YYYY-MM-DD HH:MM` to include a time block (e.g., `2026-03-25` or `2026-03-25 17:00`).
 
 **Optional flags:**
-- `-duration`: Duration in minutes. Default is `60`. This is used to calculate the end time in the title.
+- `-duration`: Duration in minutes. Optional, no default. If specified, it will be added to the task on Todoist.
 - `-project`: Target project name (it will be fuzzy-matched locally). If omitted, goes to Inbox.
 - `-labels`: Comma-separated labels (e.g., `important,coding`).
 - `-desc`: Task description text.

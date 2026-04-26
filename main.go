@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"todoist-cli/internal/client"
 	"todoist-cli/internal/task"
 )
 
@@ -38,30 +39,30 @@ EXAMPLES:
 For more details, check the README.md file.`)
 }
 
-func main() {
+func run() error {
 	_ = godotenv.Load()
-	token := os.Getenv("TODOIST_API_TOKEN")
-
-	if len(os.Args) >= 2 && (os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h") {
-		printHelp()
-		os.Exit(0)
-	}
-
-	if token == "" {
-		fmt.Println("❌ Error: TODOIST_API_TOKEN not found in environment or .env file")
-		os.Exit(1)
-	}
+	token := strings.TrimSpace(os.Getenv("TODOIST_API_TOKEN"))
 
 	if len(os.Args) < 2 {
 		printHelp()
-		os.Exit(1)
+		return fmt.Errorf("no command provided")
+	}
+
+	if os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h" {
+		printHelp()
+		return nil
+	}
+
+	if token == "" {
+		return fmt.Errorf("TODOIST_API_TOKEN not found in environment or .env file")
 	}
 
 	command := os.Args[1]
+	todoistClient := client.New(token)
 
 	switch command {
 	case "create":
-		createCmd := flag.NewFlagSet("create", flag.ExitOnError)
+		createCmd := flag.NewFlagSet("create", flag.ContinueOnError)
 		name := createCmd.String("name", "", "Task name (Required)")
 		start := createCmd.String("start", "", "Start date, e.g. '2026-03-25' or '2026-03-25 17:00' (Required)")
 		duration := createCmd.Int("duration", 0, "Duration in minutes (optional)")
@@ -70,55 +71,71 @@ func main() {
 		desc := createCmd.String("desc", "", "Task description")
 		priority := createCmd.Int("priority", 4, "Priority 1 (Urgent) to 4 (Normal)")
 
+		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
+			fmt.Println("USAGE:\n  ./todoist-cli create [options]\n\nOPTIONS:")
+			createCmd.PrintDefaults()
+			return nil
+		}
+
 		if err := createCmd.Parse(os.Args[2:]); err != nil {
-			fmt.Printf("❌ Error: %v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 		if *name == "" || *start == "" {
-			fmt.Println("❌ Error: -name and -start flags are required.")
-			fmt.Println("Usage: ./todoist-cli create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\"")
-			os.Exit(1)
+			return fmt.Errorf("-name and -start flags are required.\nUsage: ./todoist-cli create -name \"Task\" -start \"YYYY-MM-DD\" or \"YYYY-MM-DD HH:MM\" (also accepts / instead of -)")
+		}
+
+		if *duration < 0 {
+			return fmt.Errorf("-duration must be a positive integer")
 		}
 
 		if *priority < 1 || *priority > 4 {
-			fmt.Println("❌ Error: -priority must be between 1 (Urgent) and 4 (Normal).")
-			os.Exit(1)
+			return fmt.Errorf("-priority must be between 1 (Urgent) and 4 (Normal)")
 		}
 
 		var labels []string
 		if *labelsIn != "" {
 			for _, e := range strings.Split(*labelsIn, ",") {
-				labels = append(labels, strings.TrimSpace(e))
+				trimmed := strings.TrimSpace(e)
+				if trimmed != "" {
+					labels = append(labels, trimmed)
+				}
 			}
 		}
 
-		creator := task.NewCreator(token)
+		creator := task.NewCreator(todoistClient)
 		if err := creator.Create(*name, *start, *duration, *project, labels, *desc, *priority); err != nil {
-			fmt.Printf("❌ Error: %v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 	case "fetch":
+		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
+			fmt.Println("USAGE:\n  ./todoist-cli fetch <preset|filter>\n\nEXAMPLES:\n  ./todoist-cli fetch foco\n  ./todoist-cli fetch \"today & #Work\"")
+			return nil
+		}
 		if len(os.Args) < 3 {
-			fmt.Println("❌ Error: A command or filter is required for fetch.")
-			fmt.Println("Example: ./todoist-cli fetch foco")
-			fmt.Println("Example: ./todoist-cli fetch \"today & #Work\"")
-			os.Exit(1)
+			return fmt.Errorf("a command or filter is required for fetch.\nExample: ./todoist-cli fetch foco\nExample: ./todoist-cli fetch \"today & #Work\"")
 		}
 		queryName := os.Args[2]
-		fetcher := task.NewFetcher(token)
+		fetcher := task.NewFetcher(todoistClient)
 		if err := fetcher.Fetch(queryName); err != nil {
-			fmt.Printf("❌ Error: %v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 	case "help":
 		printHelp()
 
 	default:
-		fmt.Printf("❌ Command '%s' not recognized.\n\n", command)
 		printHelp()
+		return fmt.Errorf("command '%s' not recognized", command)
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Printf("❌ Error: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -37,7 +37,7 @@ func TestFormatTask(t *testing.T) {
 				},
 				ProjectID: "proj1",
 			},
-			expected: "Do something | 27 mar | P2 | Work",
+			expected: "Do something | 27 Mar | P2 | Work",
 		},
 		{
 			name: "Date only different year",
@@ -48,7 +48,7 @@ func TestFormatTask(t *testing.T) {
 					Date: "2027-03-27",
 				},
 			},
-			expected: "Do something | 27 mar 2027 | P3 | Inbox",
+			expected: "Do something | 27 Mar 2027 | P3 | Inbox",
 		},
 		{
 			name: "Datetime same year",
@@ -60,7 +60,7 @@ func TestFormatTask(t *testing.T) {
 				},
 				ProjectID: "proj1",
 			},
-			expected: "Meeting | 27 mar 14:30 | P1 | Work",
+			expected: "Meeting | 27 Mar 14:30 | P1 | Work",
 		},
 		{
 			name: "Datetime different year",
@@ -71,7 +71,7 @@ func TestFormatTask(t *testing.T) {
 					Datetime: "2027-03-27T14:30:00Z",
 				},
 			},
-			expected: "Meeting next year | 27 mar 2027 14:30 | P1 | Inbox",
+			expected: "Meeting next year | 27 Mar 2027 14:30 | P1 | Inbox",
 		},
 		{
 			name: "With duration minutes",
@@ -87,7 +87,7 @@ func TestFormatTask(t *testing.T) {
 					Unit:   "minute",
 				},
 			},
-			expected: "Meeting | 27 mar 14:30 | P1 | Work | 30m",
+			expected: "Meeting | 27 Mar 14:30 | P1 | Work | ⏱ 30m",
 		},
 		{
 			name: "With duration hours",
@@ -103,7 +103,7 @@ func TestFormatTask(t *testing.T) {
 					Unit:   "hour",
 				},
 			},
-			expected: "Deep Work | 27 mar | P1 | Work | 2h",
+			expected: "Deep Work | 27 Mar | P1 | Work | ⏱ 2h",
 		},
 		{
 			name: "With labels",
@@ -116,7 +116,7 @@ func TestFormatTask(t *testing.T) {
 				ProjectID: "proj2",
 				Labels:    []string{"urgent", "home"},
 			},
-			expected: "Task with labels | 27 mar | P2 | Personal | @urgent @home",
+			expected: "Task with labels | 27 Mar | P2 | Personal | @urgent @home",
 		},
 		{
 			name: "Full: labels + duration",
@@ -133,7 +133,7 @@ func TestFormatTask(t *testing.T) {
 					Unit:   "minute",
 				},
 			},
-			expected: "Full task | 27 mar 10:00 | P3 | Work | @coding | 90m",
+			expected: "Full task | 27 Mar 10:00 | P3 | Work | @coding | ⏱ 90m",
 		},
 		{
 			name: "Due string fallback",
@@ -167,5 +167,33 @@ func TestFormatTask(t *testing.T) {
 				t.Errorf("FormatTask() = %q, want %q", result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestFormatDueEdgeCases(t *testing.T) {
+	now := time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC)
+
+	// Test unparseable date
+	due := &models.Due{
+		Datetime: "invalid-date-format",
+	}
+	res := formatDue(due, now)
+	if res != "invalid-date-format" {
+		t.Errorf("Expected fallback to raw datetime string, got %s", res)
+	}
+
+	// Test unparseable date but valid date fallback
+	due2 := &models.Due{
+		Date: "invalid-date-format",
+	}
+	res2 := formatDue(due2, now)
+	if res2 != "invalid-date-format" {
+		t.Errorf("Expected fallback to raw date string, got %s", res2)
+	}
+
+	// Test nil due
+	res3 := formatDue(nil, now)
+	if res3 != "-" {
+		t.Errorf("Expected -, got %s", res3)
 	}
 }

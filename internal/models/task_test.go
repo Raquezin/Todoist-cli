@@ -42,3 +42,43 @@ func TestTaskRequestMarshal(t *testing.T) {
 		t.Errorf("Expected %s, got %s", expected, string(data))
 	}
 }
+
+func TestPriorityConversions(t *testing.T) {
+	// Test UI -> API
+	uiToAPI := map[int]int{
+		1:  4, // P1 -> API 4
+		2:  3, // P2 -> API 3
+		3:  2, // P3 -> API 2
+		4:  1, // P4 -> API 1
+		0:  4, // Out of bounds UI -> Cap at 4
+		5:  1, // Out of bounds UI -> Cap at 1
+		-1: 4, // Out of bounds UI -> Cap at 4
+		10: 1, // Out of bounds UI -> Cap at 1
+	}
+
+	for ui, expectedAPI := range uiToAPI {
+		gotAPI := ToAPIPriority(ui)
+		if gotAPI != expectedAPI {
+			t.Errorf("ToAPIPriority(%d) = %d; want %d", ui, gotAPI, expectedAPI)
+		}
+	}
+
+	// Test API -> UI
+	apiToUI := map[int]int{
+		4:  1, // API 4 -> P1
+		3:  2, // API 3 -> P2
+		2:  3, // API 2 -> P3
+		1:  4, // API 1 -> P4
+		0:  4, // Out of bounds API -> Cap at 4
+		5:  1, // Out of bounds API -> Cap at 1
+		-1: 4, // Out of bounds API -> Cap at 4
+		10: 1, // Out of bounds API -> Cap at 1
+	}
+
+	for api, expectedUI := range apiToUI {
+		gotUI := ToUIPriority(api)
+		if gotUI != expectedUI {
+			t.Errorf("ToUIPriority(%d) = %d; want %d", api, gotUI, expectedUI)
+		}
+	}
+}
