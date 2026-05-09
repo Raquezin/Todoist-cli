@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"testing"
 	"todoist-cli/internal/client"
 )
@@ -140,6 +141,30 @@ func TestRefreshCache(t *testing.T) {
 	id := GetCachedProjectID("Refreshed")
 	if id != "refreshed1" {
 		t.Errorf("Expected refreshed1, got %s", id)
+	}
+}
+
+func TestAtomicWriteUsesPrivateFilePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits are not portable on Windows")
+	}
+
+	tmpfile, err := os.CreateTemp("", "cache_*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if err := atomicWrite(tmpfile.Name(), []byte(`{}`)); err != nil {
+		t.Fatalf("atomicWrite failed: %v", err)
+	}
+
+	info, err := os.Stat(tmpfile.Name())
+	if err != nil {
+		t.Fatalf("stat failed: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0600 {
+		t.Fatalf("Expected 0600 cache permissions, got %o", got)
 	}
 }
 

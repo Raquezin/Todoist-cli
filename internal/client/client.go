@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"todoist-cli/internal/models"
+	"todoist-cli/internal/sanitize"
 )
 
 type TodoistClient struct {
@@ -33,8 +34,37 @@ func New(token string) *TodoistClient {
 	}
 }
 
+const (
+	maxErrorBodyBytes = 4096
+	maxRetryAfter     = 5 * time.Second
+)
+
+func validateBaseURL(baseURL string) error {
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return fmt.Errorf("invalid API URL: %w", err)
+	}
+	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+		return fmt.Errorf("invalid API URL scheme %q", parsed.Scheme)
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("invalid API URL: missing host")
+	}
+	if parsed.Scheme == "http" {
+		host := parsed.Hostname()
+		if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+			return fmt.Errorf("refusing to send API token over insecure HTTP to %s", host)
+		}
+	}
+	return nil
+}
+
 // doRequest performs the HTTP request, handles errors, and unmarshals the response into target.
 func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target any) error {
+	if err := validateBaseURL(c.BaseURL); err != nil {
+		return err
+	}
+
 	var reqBytes []byte
 	var err error
 	if reqBody != nil {
@@ -81,7 +111,14 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 				} else if resp.StatusCode >= 500 {
 					secs = 2
 				}
-				time.Sleep(time.Duration(secs) * time.Second)
+				delay := time.Duration(secs) * time.Second
+				if delay < 0 {
+					delay = 0
+				}
+				if delay > maxRetryAfter {
+					delay = maxRetryAfter
+				}
+				time.Sleep(delay)
 				continue
 			}
 		}
@@ -90,8 +127,14 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error (%d): %s", resp.StatusCode, string(bodyBytes))
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))
+		body := string(bodyBytes)
+		if len(bodyBytes) > maxErrorBodyBytes {
+			body = sanitize.TerminalLimit(body, maxErrorBodyBytes)
+		} else {
+			body = sanitize.Terminal(body)
+		}
+		return fmt.Errorf("API error (%d): %s", resp.StatusCode, body)
 	}
 
 	if target != nil {

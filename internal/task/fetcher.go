@@ -7,6 +7,7 @@ import (
 	"todoist-cli/internal/cache"
 	"todoist-cli/internal/client"
 	"todoist-cli/internal/models"
+	"todoist-cli/internal/sanitize"
 )
 
 // --- CONFIGURACIÓN DE QUERIES ---
@@ -36,12 +37,12 @@ func (f *Fetcher) Fetch(queryName string) error {
 	var queryFinal string
 	if exists {
 		queryFinal = fmt.Sprintf("(%s) %s", queryBase, exclusionGlobal)
-		fmt.Printf("\n🔍 Executing preset: [%s]\n", queryName)
+		fmt.Printf("\n🔍 Executing preset: [%s]\n", sanitize.Terminal(queryName))
 	} else {
 		queryFinal = queryBase
 		fmt.Printf("\n🔍 Executing custom filter\n")
 	}
-	fmt.Printf("💻 Sent query: %s\n", queryFinal)
+	fmt.Printf("💻 Sent query: %s\n", sanitize.Terminal(queryFinal))
 
 	var allTasks []models.FilteredTask
 	cursor := ""

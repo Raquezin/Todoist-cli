@@ -6,9 +6,13 @@ import (
 	"time"
 
 	"todoist-cli/internal/models"
+	"todoist-cli/internal/sanitize"
 )
 
 const maxDateLen = 35
+const maxContentLen = 500
+const maxLabelLen = 100
+const maxProjectLen = 120
 
 func formatDue(due *models.Due, now time.Time) string {
 	if due == nil {
@@ -52,11 +56,7 @@ func formatDue(due *models.Due, now time.Time) string {
 	}
 
 	if due.String != "" {
-		s := due.String
-		if len(s) > maxDateLen {
-			s = s[:maxDateLen-3] + "..."
-		}
-		return s
+		return sanitize.TerminalLimit(due.String, maxDateLen)
 	}
 
 	dateVal := due.Datetime
@@ -64,10 +64,7 @@ func formatDue(due *models.Due, now time.Time) string {
 		dateVal = due.Date
 	}
 	if dateVal != "" {
-		if len(dateVal) > maxDateLen {
-			dateVal = dateVal[:maxDateLen-3] + "..."
-		}
-		return dateVal
+		return sanitize.TerminalLimit(dateVal, maxDateLen)
 	}
 	return "-"
 }
@@ -78,7 +75,7 @@ func formatLabels(labels []string) string {
 	}
 	parts := make([]string, len(labels))
 	for i, l := range labels {
-		parts[i] = "@" + l
+		parts[i] = "@" + sanitize.TerminalLimit(l, maxLabelLen)
 	}
 	return strings.Join(parts, " ")
 }
@@ -100,7 +97,8 @@ func formatDuration(dur *models.Duration) string {
 // FormatTask formats a FilteredTask into a readable string.
 // projectMap maps project IDs to project names.
 func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]string) string {
-	content := strings.ReplaceAll(t.Content, "|", "¦")
+	content := sanitize.TerminalLimit(t.Content, maxContentLen)
+	content = strings.ReplaceAll(content, "|", "¦")
 	content = strings.ReplaceAll(content, "\n", " ")
 	content = strings.ReplaceAll(content, "\r", "")
 	date := formatDue(t.Due, now)
@@ -110,6 +108,7 @@ func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]stri
 	if project == "" {
 		project = "Inbox"
 	}
+	project = sanitize.TerminalLimit(project, maxProjectLen)
 
 	labels := formatLabels(t.Labels)
 	duration := formatDuration(t.Duration)

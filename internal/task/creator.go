@@ -9,6 +9,7 @@ import (
 	"todoist-cli/internal/cache"
 	"todoist-cli/internal/client"
 	"todoist-cli/internal/models"
+	"todoist-cli/internal/sanitize"
 )
 
 type Creator struct {
@@ -90,7 +91,7 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 
 	projectID := cache.GetProjectID(c.Client, projectName)
 	if projectID == "" && projectName != "" {
-		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", projectName)
+		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
 	}
 
 	taskReq := models.TaskRequest{
@@ -117,6 +118,6 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 	}
 
 	fmt.Println("✅ Task created successfully!")
-	fmt.Printf("   Title: %s\n", taskRes.Content)
+	fmt.Printf("   Title: %s\n", sanitize.TerminalLimit(taskRes.Content, 500))
 	return nil
 }

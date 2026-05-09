@@ -1,6 +1,7 @@
 package task
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ func TestFormatTask(t *testing.T) {
 	projectMap := map[string]string{
 		"proj1": "Work",
 		"proj2": "Personal",
+		"proj3": "Project\x1b[0m",
 	}
 
 	tests := []struct {
@@ -136,6 +138,19 @@ func TestFormatTask(t *testing.T) {
 			expected: "Full task | 27 Mar 10:00 | P3 | Work | @coding | ⏱ 90m",
 		},
 		{
+			name: "Sanitizes terminal control sequences",
+			task: models.FilteredTask{
+				Content:   "Task\x1b[2J\nName",
+				Priority:  4,
+				ProjectID: "proj3",
+				Labels:    []string{"bad\x1b[31m"},
+				Due: &models.Due{
+					String: "soon\x1b[2J\nagain",
+				},
+			},
+			expected: "Task[2J Name | soon[2J again | P1 | Project[0m | @bad[31m",
+		},
+		{
 			name: "Due string fallback",
 			task: models.FilteredTask{
 				Content:  "Recurring",
@@ -195,5 +210,29 @@ func TestFormatDueEdgeCases(t *testing.T) {
 	res3 := formatDue(nil, now)
 	if res3 != "-" {
 		t.Errorf("Expected -, got %s", res3)
+	}
+}
+
+func TestFormatTaskCapsUntrustedFieldLengths(t *testing.T) {
+	now := time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC)
+	projectMap := map[string]string{
+		"proj1": strings.Repeat("p", maxProjectLen+20),
+	}
+	task := models.FilteredTask{
+		Content:   strings.Repeat("c", maxContentLen+20),
+		ProjectID: "proj1",
+		Priority:  4,
+		Labels:    []string{strings.Repeat("l", maxLabelLen+20)},
+	}
+
+	got := FormatTask(task, now, projectMap)
+	if strings.Contains(got, strings.Repeat("c", maxContentLen)) {
+		t.Fatalf("Expected content to be capped, got %q", got)
+	}
+	if strings.Contains(got, strings.Repeat("p", maxProjectLen)) {
+		t.Fatalf("Expected project to be capped, got %q", got)
+	}
+	if strings.Contains(got, strings.Repeat("l", maxLabelLen)) {
+		t.Fatalf("Expected label to be capped, got %q", got)
 	}
 }

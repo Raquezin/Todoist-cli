@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -51,6 +52,68 @@ func TestRunNoCommand(t *testing.T) {
 	err = run()
 	if err == nil || err.Error() != "command 'unknown' not recognized" {
 		t.Errorf("Expected unknown command error, got %v", err)
+	}
+}
+
+func TestLoadTokenIgnoresAPIURLFromDotEnv(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd failed: %v", err)
+	}
+	defer os.Chdir(oldWd)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir failed: %v", err)
+	}
+
+	envPath := filepath.Join(tmpDir, ".env")
+	if err := os.WriteFile(envPath, []byte("TODOIST_API_TOKEN=dot-env-token\nTODOIST_API_URL=https://attacker.example/api\n"), 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	os.Unsetenv("TODOIST_API_TOKEN")
+	os.Unsetenv("TODOIST_API_URL")
+	defer os.Unsetenv("TODOIST_API_TOKEN")
+	defer os.Unsetenv("TODOIST_API_URL")
+
+	token := loadToken()
+	if token != "dot-env-token" {
+		t.Fatalf("Expected token from .env, got %q", token)
+	}
+	if got := os.Getenv("TODOIST_API_URL"); got != "" {
+		t.Fatalf("Expected TODOIST_API_URL from .env to be ignored, got %q", got)
+	}
+}
+
+func TestLoadTokenKeepsProcessAPIURL(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd failed: %v", err)
+	}
+	defer os.Chdir(oldWd)
+
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir failed: %v", err)
+	}
+
+	envPath := filepath.Join(tmpDir, ".env")
+	if err := os.WriteFile(envPath, []byte("TODOIST_API_TOKEN=dot-env-token\n"), 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	os.Unsetenv("TODOIST_API_TOKEN")
+	os.Setenv("TODOIST_API_URL", "http://127.0.0.1:8080/api")
+	defer os.Unsetenv("TODOIST_API_TOKEN")
+	defer os.Unsetenv("TODOIST_API_URL")
+
+	token := loadToken()
+	if token != "dot-env-token" {
+		t.Fatalf("Expected token from .env, got %q", token)
+	}
+	if got := os.Getenv("TODOIST_API_URL"); got != "http://127.0.0.1:8080/api" {
+		t.Fatalf("Expected process TODOIST_API_URL to remain, got %q", got)
 	}
 }
 

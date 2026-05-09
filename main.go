@@ -8,6 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"todoist-cli/internal/client"
+	"todoist-cli/internal/sanitize"
 	"todoist-cli/internal/task"
 )
 
@@ -39,9 +40,17 @@ EXAMPLES:
 For more details, check the README.md file.`)
 }
 
-func run() error {
+func loadToken() string {
+	apiURLFromEnv := os.Getenv("TODOIST_API_URL")
 	_ = godotenv.Load()
-	token := strings.TrimSpace(os.Getenv("TODOIST_API_TOKEN"))
+	if apiURLFromEnv == "" {
+		_ = os.Unsetenv("TODOIST_API_URL")
+	}
+	return strings.TrimSpace(os.Getenv("TODOIST_API_TOKEN"))
+}
+
+func run() error {
+	token := loadToken()
 
 	if len(os.Args) < 2 {
 		printHelp()
@@ -135,7 +144,7 @@ func run() error {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Printf("❌ Error: %v\n", err)
+		fmt.Printf("❌ Error: %s\n", sanitize.TerminalLimit(err.Error(), 2000))
 		os.Exit(1)
 	}
 }

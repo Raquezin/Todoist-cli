@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"todoist-cli/internal/client"
+	"todoist-cli/internal/sanitize"
 )
 
 var CacheFile = ".cache/proyectos_cache.json"
@@ -53,7 +54,7 @@ func GetProjectID(apiClient *client.TodoistClient, name string) string {
 	if fileData, err := os.ReadFile(CacheFile); err == nil {
 		if err := json.Unmarshal(fileData, &cacheData); err == nil {
 			if entry, exists := cacheData[nameLower]; exists {
-				fmt.Printf("⚡ [Cache] Project '%s' found locally.\n", name)
+				fmt.Printf("⚡ [Cache] Project '%s' found locally.\n", sanitize.TerminalLimit(name, 120))
 				return entry.ID
 			}
 		} else {
@@ -65,7 +66,7 @@ func GetProjectID(apiClient *client.TodoistClient, name string) string {
 
 	projects, err := apiClient.GetProjects()
 	if err != nil {
-		fmt.Printf("❌ Error fetching projects: %v\n", err)
+		fmt.Printf("❌ Error fetching projects: %s\n", sanitize.Terminal(err.Error()))
 		return ""
 	}
 
@@ -76,7 +77,7 @@ func GetProjectID(apiClient *client.TodoistClient, name string) string {
 
 	if cacheBytes, err := json.MarshalIndent(cacheData, "", "    "); err == nil {
 		if err := atomicWrite(CacheFile, cacheBytes); err != nil {
-			fmt.Printf("⚠️ Warning: Failed to write cache file: %v\n", err)
+			fmt.Printf("⚠️ Warning: Failed to write cache file: %s\n", sanitize.Terminal(err.Error()))
 		} else {
 			fmt.Println("💾 Project cache updated.")
 		}
@@ -90,7 +91,7 @@ func GetAllCachedProjects() map[string]string {
 	result := make(map[string]string)
 	if fileData, err := os.ReadFile(CacheFile); err == nil {
 		if err := json.Unmarshal(fileData, &cacheData); err != nil {
-			fmt.Printf("⚠️ Warning: Failed to unmarshal cache data: %v\n", err)
+			fmt.Printf("⚠️ Warning: Failed to unmarshal cache data: %s\n", sanitize.Terminal(err.Error()))
 		} else {
 			for _, entry := range cacheData {
 				result[entry.ID] = entry.Name

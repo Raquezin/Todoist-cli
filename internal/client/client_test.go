@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"todoist-cli/internal/models"
 )
@@ -126,6 +127,16 @@ func TestDoRequestErrors(t *testing.T) {
 			_, _ = w.Write([]byte(`{"invalid-json`))
 			return
 		}
+		if r.URL.Path == "/terminal-control" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("bad\x1b[2J\nnext"))
+			return
+		}
+		if r.URL.Path == "/large-error" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(strings.Repeat("a", maxErrorBodyBytes+128)))
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -151,11 +162,49 @@ func TestDoRequestErrors(t *testing.T) {
 		t.Fatal("Expected JSON decode error")
 	}
 
+	err = client.doRequest("GET", "/terminal-control", nil, nil)
+	if err == nil || strings.ContainsAny(err.Error(), "\x1b\n\r") {
+		t.Fatalf("Expected sanitized API error, got %q", err)
+	}
+
+	err = client.doRequest("GET", "/large-error", nil, nil)
+	if err == nil {
+		t.Fatal("Expected large API error")
+	}
+	if len(err.Error()) > maxErrorBodyBytes+64 || !strings.HasSuffix(err.Error(), "...") {
+		t.Fatalf("Expected capped API error, got length %d and error %q", len(err.Error()), err)
+	}
+
 	// Test bad URL
 	client.BaseURL = "http://invalid-url-\x00"
 	err = client.doRequest("GET", "/test", nil, nil)
 	if err == nil {
 		t.Fatal("Expected request build error")
+	}
+}
+
+func TestValidateBaseURLRejectsInsecureRemoteHTTP(t *testing.T) {
+	client := New("fake-token")
+	client.BaseURL = "http://example.com/api"
+
+	_, err := client.GetProjects()
+	if err == nil {
+		t.Fatal("Expected insecure HTTP URL to be rejected")
+	}
+	if !strings.Contains(err.Error(), "refusing to send API token over insecure HTTP") {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
+func TestValidateBaseURLAllowsLocalHTTPAndHTTPS(t *testing.T) {
+	for _, baseURL := range []string{
+		"http://127.0.0.1:8080/api",
+		"http://localhost:8080/api",
+		"https://api.todoist.com/api/v1",
+	} {
+		if err := validateBaseURL(baseURL); err != nil {
+			t.Fatalf("Expected %s to be allowed, got %v", baseURL, err)
+		}
 	}
 }
 
