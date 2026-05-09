@@ -155,7 +155,11 @@ func TestAtomicWriteUsesPrivateFilePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			t.Logf("Failed to remove temp file: %v", err)
+		}
+	}()
 
 	if err := atomicWrite(tmpfile.Name(), []byte(`{}`)); err != nil {
 		t.Fatalf("atomicWrite failed: %v", err)
@@ -183,7 +187,11 @@ func TestGetAllCachedProjectsBadData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			t.Logf("Failed to remove temp file: %v", err)
+		}
+	}()
 
 	oldCache := CacheFile
 	CacheFile = tmpfile.Name()
