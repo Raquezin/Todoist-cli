@@ -102,7 +102,7 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			if retries < 2 {
 				retryAfter := resp.Header.Get("Retry-After")
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				secs := 1
 				if retryAfter != "" {
 					if parsedSecs, err := strconv.Atoi(retryAfter); err == nil {
@@ -124,7 +124,9 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 		}
 		break
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))

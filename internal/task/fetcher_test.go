@@ -53,11 +53,11 @@ func TestFetcherFetch(t *testing.T) {
 		}
 	}))
 	defer tsEmpty.Close()
-	
+
 	apiClientEmpty := client.New("fake-token")
 	apiClientEmpty.BaseURL = tsEmpty.URL
 	fEmpty := NewFetcher(apiClientEmpty)
-	
+
 	err = fEmpty.Fetch("custom query")
 	if err != nil {
 		t.Fatalf("Fetch empty failed: %v", err)
@@ -68,7 +68,7 @@ func TestFetcherPaginationLimit(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/tasks/filter" {
 			// Always return next_cursor to force infinite loop
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
 				"results": [{"id":"t3", "content":"Infinite Task", "project_id":"proj1", "priority":4}],
 				"next_cursor": "neverending"
 			}`))

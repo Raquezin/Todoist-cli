@@ -121,9 +121,15 @@ func TestNewCreatorTZFallback(t *testing.T) {
 	// Need to test fallback when TZ is invalid
 
 	oldTz := os.Getenv("TZ")
-	defer os.Setenv("TZ", oldTz)
+	defer func() {
+		if err := os.Setenv("TZ", oldTz); err != nil {
+			t.Fatalf("Failed to restore TZ: %v", err)
+		}
+	}()
 
-	os.Setenv("TZ", "Invalid/Timezone")
+	if err := os.Setenv("TZ", "Invalid/Timezone"); err != nil {
+		t.Fatalf("Failed to set TZ: %v", err)
+	}
 	c := NewCreator(client.New("fake"))
 	if c.Loc == nil {
 		t.Error("Expected fallback to time.Local, got nil")

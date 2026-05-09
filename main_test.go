@@ -31,14 +31,18 @@ func TestRunNoCommand(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Missing env variable
-	os.Setenv("TODOIST_API_TOKEN", "")
+	if err := os.Setenv("TODOIST_API_TOKEN", ""); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 	os.Args = []string{"todoist-cli", "create"}
 	err := run()
 	if err == nil || err.Error() != "TODOIST_API_TOKEN not found in environment or .env file" {
 		t.Errorf("Expected token error, got %v", err)
 	}
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// No command
 	os.Args = []string{"todoist-cli"}
@@ -61,7 +65,11 @@ func TestLoadTokenIgnoresAPIURLFromDotEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd failed: %v", err)
 	}
-	defer os.Chdir(oldWd)
+	defer func() {
+		if err := os.Chdir(oldWd); err != nil {
+			t.Fatalf("Failed to restore working directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir failed: %v", err)
@@ -72,10 +80,22 @@ func TestLoadTokenIgnoresAPIURLFromDotEnv(t *testing.T) {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
 
-	os.Unsetenv("TODOIST_API_TOKEN")
-	os.Unsetenv("TODOIST_API_URL")
-	defer os.Unsetenv("TODOIST_API_TOKEN")
-	defer os.Unsetenv("TODOIST_API_URL")
+	if err := os.Unsetenv("TODOIST_API_TOKEN"); err != nil {
+		t.Fatalf("Unsetenv failed: %v", err)
+	}
+	if err := os.Unsetenv("TODOIST_API_URL"); err != nil {
+		t.Fatalf("Unsetenv failed: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TODOIST_API_TOKEN"); err != nil {
+			t.Fatalf("Unsetenv failed: %v", err)
+		}
+	}()
+	defer func() {
+		if err := os.Unsetenv("TODOIST_API_URL"); err != nil {
+			t.Fatalf("Unsetenv failed: %v", err)
+		}
+	}()
 
 	token := loadToken()
 	if token != "dot-env-token" {
@@ -92,7 +112,11 @@ func TestLoadTokenKeepsProcessAPIURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Getwd failed: %v", err)
 	}
-	defer os.Chdir(oldWd)
+	defer func() {
+		if err := os.Chdir(oldWd); err != nil {
+			t.Fatalf("Failed to restore working directory: %v", err)
+		}
+	}()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Chdir failed: %v", err)
@@ -103,10 +127,22 @@ func TestLoadTokenKeepsProcessAPIURL(t *testing.T) {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
 
-	os.Unsetenv("TODOIST_API_TOKEN")
-	os.Setenv("TODOIST_API_URL", "http://127.0.0.1:8080/api")
-	defer os.Unsetenv("TODOIST_API_TOKEN")
-	defer os.Unsetenv("TODOIST_API_URL")
+	if err := os.Unsetenv("TODOIST_API_TOKEN"); err != nil {
+		t.Fatalf("Unsetenv failed: %v", err)
+	}
+	if err := os.Setenv("TODOIST_API_URL", "http://127.0.0.1:8080/api"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TODOIST_API_TOKEN"); err != nil {
+			t.Fatalf("Unsetenv failed: %v", err)
+		}
+	}()
+	defer func() {
+		if err := os.Unsetenv("TODOIST_API_URL"); err != nil {
+			t.Fatalf("Unsetenv failed: %v", err)
+		}
+	}()
 
 	token := loadToken()
 	if token != "dot-env-token" {
@@ -121,7 +157,9 @@ func TestRunCreateValidations(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// Missing required flags
 	os.Args = []string{"todoist-cli", "create"}
@@ -142,7 +180,9 @@ func TestRunFetchValidations(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// Missing query
 	os.Args = []string{"todoist-cli", "fetch"}
@@ -156,7 +196,9 @@ func TestRunCreateSuccess(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/projects" {
@@ -169,8 +211,14 @@ func TestRunCreateSuccess(t *testing.T) {
 		}
 	}))
 	defer ts.Close()
-	os.Setenv("TODOIST_API_URL", ts.URL)
-	defer os.Unsetenv("TODOIST_API_URL")
+	if err := os.Setenv("TODOIST_API_URL", ts.URL); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("TODOIST_API_URL"); err != nil {
+			t.Fatalf("Unsetenv failed: %v", err)
+		}
+	}()
 
 	os.Args = []string{
 		"todoist-cli", "create",
@@ -192,7 +240,9 @@ func TestRunCreateParseError(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// Force parse error with invalid integer for duration
 	os.Args = []string{"todoist-cli", "create", "-duration", "not-an-int"}
@@ -206,7 +256,9 @@ func TestRunSubcommandHelp(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// create --help
 	os.Args = []string{"todoist-cli", "create", "--help"}
@@ -224,7 +276,9 @@ func TestRunSubcommandHelp(t *testing.T) {
 func TestRunCreateValidationsAdvanced(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
-	os.Setenv("TODOIST_API_TOKEN", "fake-token")
+	if err := os.Setenv("TODOIST_API_TOKEN", "fake-token"); err != nil {
+		t.Fatalf("Setenv failed: %v", err)
+	}
 
 	// Missing start flag but name present
 	os.Args = []string{"todoist-cli", "create", "-name", "A"}

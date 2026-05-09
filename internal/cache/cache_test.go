@@ -78,12 +78,14 @@ func TestGetProjectID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	os.Remove(tmpfile.Name()) // Ensure it does not exist to trigger fetch
+	if err := os.Remove(tmpfile.Name()); err != nil { // Ensure it does not exist to trigger fetch
+		t.Fatalf("Failed to remove temp file: %v", err)
+	}
 
 	oldCache := CacheFile
 	CacheFile = tmpfile.Name()
 	defer func() {
-		os.Remove(CacheFile)
+		_ = os.Remove(CacheFile)
 		CacheFile = oldCache
 	}()
 
@@ -187,7 +189,9 @@ func TestGetAllCachedProjectsBadData(t *testing.T) {
 	CacheFile = tmpfile.Name()
 	defer func() { CacheFile = oldCache }()
 
-	os.WriteFile(CacheFile, []byte("{invalid-json"), 0644)
+	if err := os.WriteFile(CacheFile, []byte("{invalid-json"), 0644); err != nil {
+		t.Fatalf("Failed to write invalid cache test file: %v", err)
+	}
 
 	// Should not panic, but return an empty map since unmarshal fails
 	res := GetAllCachedProjects()
