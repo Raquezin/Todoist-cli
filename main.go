@@ -26,7 +26,7 @@ AVAILABLE COMMANDS:
 EXAMPLES:
 
 1. Create a task:
-   ./todoist-cli create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -priority 1
+   ./todoist-cli create -name "Meeting" -start "2026-03-25 17:00" -duration 60 -project "Work" -section "Sprint" -priority 1
    ./todoist-cli create -name "Buy milk" -start "2026-03-25"
 
 2. Fetch tasks (Presets):
@@ -79,6 +79,7 @@ func run() error {
 		labelsIn := createCmd.String("labels", "", "Comma-separated labels (e.g. important,coding)")
 		desc := createCmd.String("desc", "", "Task description")
 		priority := createCmd.Int("priority", 4, "Priority 1 (Urgent) to 4 (Normal)")
+		section := createCmd.String("section", "", "Section name")
 
 		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
 			fmt.Println("USAGE:\n  ./todoist-cli create [options]\n\nOPTIONS:")
@@ -113,7 +114,7 @@ func run() error {
 		}
 
 		creator := task.NewCreator(todoistClient)
-		if err := creator.Create(*name, *start, *duration, *project, labels, *desc, *priority); err != nil {
+		if err := creator.Create(*name, *start, *duration, *project, *section, labels, *desc, *priority); err != nil {
 			return err
 		}
 

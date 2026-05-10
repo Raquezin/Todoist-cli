@@ -33,7 +33,14 @@ func NewCreator(apiClient *client.TodoistClient) *Creator {
 	return &Creator{Client: apiClient, Loc: loc}
 }
 
-func (c *Creator) Create(name, startStr string, duration int, projectName string, labels []string, description string, priority int) error {
+func (c *Creator) Create(name, startStr string, duration int, projectName, sectionName string, labels []string, description string, priority int) error {
+	if len(name) > 500 {
+		return fmt.Errorf("task name exceeds 500 characters")
+	}
+	if len(description) > 15000 {
+		return fmt.Errorf("task description exceeds 15000 characters")
+	}
+
 	startStr = strings.TrimSpace(startStr)
 	var startDt time.Time
 
@@ -94,9 +101,15 @@ func (c *Creator) Create(name, startStr string, duration int, projectName string
 		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
 	}
 
+	sectionID := cache.GetSectionID(c.Client, sectionName, projectID)
+	if sectionID == "" && sectionName != "" {
+		fmt.Printf("⚠️ Warning: Section '%s' not found.\n", sanitize.TerminalLimit(sectionName, 120))
+	}
+
 	taskReq := models.TaskRequest{
 		Content:     name,
 		ProjectID:   projectID,
+		SectionID:   sectionID,
 		Labels:      labels,
 		Description: description,
 		Priority:    models.ToAPIPriority(priority),

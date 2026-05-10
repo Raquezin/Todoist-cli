@@ -80,13 +80,13 @@ func TestCreatorCreate(t *testing.T) {
 	apiClient.BaseURL = ts.URL
 	c := NewCreator(apiClient)
 
-	err := c.Create("Test Task", "2026-03-25 17:00", 60, "Work", []string{"tag1"}, "desc", 1)
+	err := c.Create("Test Task", "2026-03-25 17:00", 60, "Work", "", []string{"tag1"}, "desc", 1)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
 	// Test invalid date
-	err = c.Create("Test Task", "invalid-date", 0, "", nil, "", 4)
+	err = c.Create("Test Task", "invalid-date", 0, "", "", nil, "", 4)
 	if err == nil {
 		t.Fatal("Expected error for invalid date")
 	}
@@ -111,7 +111,7 @@ func TestCreatorCreateErrors(t *testing.T) {
 	c := NewCreator(apiClient)
 
 	// Valid date, but network will fail
-	err := c.Create("Test Task", "2026-03-25", 0, "Nonexistent", nil, "", 4)
+	err := c.Create("Test Task", "2026-03-25", 0, "Nonexistent", "", nil, "", 4)
 	if err == nil {
 		t.Fatal("Expected network error from API client")
 	}

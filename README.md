@@ -41,7 +41,7 @@ The CLI offers an intuitive set of subcommands. You can always view the quick gu
 Use the `create` subcommand to add new tasks. The title will automatically be appended with the duration block for Calendar integrations.
 
 ```bash
-./todoist-cli create -name "Learn Go" -start "2026-03-25 17:00" -duration 120 -project "Learning" -labels "coding,focus" -priority 1
+./todoist-cli create -name "Learn Go" -start "2026-03-25 17:00" -duration 120 -project "Learning" -section "Active" -labels "coding,focus" -priority 1
 ```
 
 **Required flags:**
@@ -51,6 +51,7 @@ Use the `create` subcommand to add new tasks. The title will automatically be ap
 **Optional flags:**
 - `-duration`: Duration in minutes. Optional, no default. If specified, it will be added to the task on Todoist.
 - `-project`: Target project name (it will be fuzzy-matched locally). If omitted, goes to Inbox.
+- `-section`: Target section name within the project. Use with `-project` for unambiguous matching.
 - `-labels`: Comma-separated labels (e.g., `important,coding`).
 - `-desc`: Task description text.
 - `-priority`: Priority level (1-4). `1` is Urgent/Red, `4` is Normal.
@@ -81,7 +82,7 @@ If the keyword is not a preset, the CLI treats it as a raw Todoist query string!
 - `main.go`: Main entry point and CLI flag parsing
 - `internal/task/`: Core logic for task creation (Calendar magic) and dynamic fetching
 - `internal/client/`: Unified Todoist REST API client
-- `internal/cache/`: Local filesystem caching for quick Project ID lookups
+- `internal/cache/`: Local filesystem caching for quick Project and Section ID lookups
 - `internal/models/`: Go structs mapping Todoist JSON responses
 
 ## 🛠️ Built With

@@ -155,6 +155,14 @@ func (c *TodoistClient) GetProjects() ([]models.Project, error) {
 	return projectsResp.Results, nil
 }
 
+func (c *TodoistClient) GetSections() ([]models.Section, error) {
+	var sectionsResp models.SectionsResponse
+	if err := c.doRequest("GET", "/sections", nil, &sectionsResp); err != nil {
+		return nil, err
+	}
+	return sectionsResp.Results, nil
+}
+
 func (c *TodoistClient) CreateTask(task models.TaskRequest) (*models.TaskResponse, error) {
 	var taskRes models.TaskResponse
 	if err := c.doRequest("POST", "/tasks", task, &taskRes); err != nil {

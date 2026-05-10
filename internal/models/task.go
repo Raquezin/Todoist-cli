@@ -5,8 +5,19 @@ type Project struct {
 	Name string `json:"name"`
 }
 
+type Section struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ProjectID string `json:"project_id"`
+}
+
 type ProjectsResponse struct {
 	Results    []Project `json:"results"`
+	NextCursor string    `json:"next_cursor,omitempty"`
+}
+
+type SectionsResponse struct {
+	Results    []Section `json:"results"`
 	NextCursor string    `json:"next_cursor,omitempty"`
 }
 
@@ -16,6 +27,7 @@ type TaskRequest struct {
 	DueDatetime  string   `json:"due_datetime,omitempty"`
 	DueDate      string   `json:"due_date,omitempty"`
 	ProjectID    string   `json:"project_id,omitempty"`
+	SectionID    string   `json:"section_id,omitempty"`
 	Labels       []string `json:"labels,omitempty"`
 	Description  string   `json:"description,omitempty"`
 	Priority     int      `json:"priority,omitempty"`
