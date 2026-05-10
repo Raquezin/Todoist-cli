@@ -8,20 +8,23 @@ import (
 
 	"github.com/joho/godotenv"
 	"todoist-cli/internal/client"
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/sanitize"
 	"todoist-cli/internal/task"
 )
 
-func printHelp() {
-	fmt.Println(`🤖 Todoist CLI - Your terminal Todoist assistant
+const version = "1.0.0"
 
-USAGE:
+func printHelp() {
+	fmt.Printf("Todoist CLI v%s - Your terminal Todoist assistant\n\n", version)
+	fmt.Println(`USAGE:
   ./todoist-cli <command> [options]
 
 AVAILABLE COMMANDS:
   create    Create a new task in Todoist with Calendar-friendly formatting
   fetch     Fetch tasks using presets or raw Todoist filters
   presets   List or manage fetch presets
+  version   Print version information
   help      Show this help message
 
 EXAMPLES:
@@ -68,6 +71,11 @@ func run() error {
 
 	if os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h" {
 		printHelp()
+		return nil
+	}
+
+	if os.Args[1] == "version" || os.Args[1] == "--version" || os.Args[1] == "-v" {
+		fmt.Println("todoist-cli version", version)
 		return nil
 	}
 
@@ -133,21 +141,30 @@ func run() error {
 		}
 
 	case "fetch":
-		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
-			fmt.Println("USAGE:\n  ./todoist-cli fetch <preset|filter>\n\nPRESETS:\n  Use './todoist-cli presets' to list available presets.\n\nEXAMPLES:\n  ./todoist-cli fetch foco\n  ./todoist-cli fetch \"today & #Work\"")
-			return nil
-		}
-		if len(os.Args) < 3 {
-			return fmt.Errorf("a command or filter is required for fetch.\nExample: ./todoist-cli fetch foco\nExample: ./todoist-cli fetch \"today & #Work\"")
-		}
-		queryName := os.Args[2]
-		fetcher := task.NewFetcher(todoistClient)
-		if err := fetcher.Fetch(queryName); err != nil {
-			return err
+		fetchArgs := os.Args[2:]
+		jsonOut := false
+
+		for i := 0; i < len(fetchArgs); i++ {
+			if fetchArgs[i] == "-json" || fetchArgs[i] == "--json" {
+				jsonOut = true
+				fetchArgs = append(fetchArgs[:i], fetchArgs[i+1:]...)
+				i--
+			}
 		}
 
-	case "help":
-		printHelp()
+		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
+			fmt.Println("USAGE:\n  ./todoist-cli fetch [-json] <preset|filter>\n\nFLAGS:\n  -json  Output tasks as JSON\n\nPRESETS:\n  Use './todoist-cli presets' to list available presets.\n\nEXAMPLES:\n  ./todoist-cli fetch foco\n  ./todoist-cli fetch -json \"today & #Work\"\n  ./todoist-cli fetch \"#Study\" -json")
+			return nil
+		}
+
+		if len(fetchArgs) == 0 {
+			return fmt.Errorf("a command or filter is required for fetch.\nExample: ./todoist-cli fetch foco\nExample: ./todoist-cli fetch \"today & #Work\"")
+		}
+		queryName := fetchArgs[0]
+		fetcher := task.NewFetcher(todoistClient)
+		if err := fetcher.Fetch(queryName, jsonOut); err != nil {
+			return err
+		}
 
 	default:
 		printHelp()
@@ -204,7 +221,7 @@ Built-in presets (foco, radar) cannot be deleted, only overridden with 'edit'.`)
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Printf("❌ Error: %s\n", sanitize.TerminalLimit(err.Error(), 2000))
+		fmt.Printf("❌ Error: %s\n", sanitize.TerminalLimit(err.Error(), limits.MaxErrorDisplay))
 		os.Exit(1)
 	}
 }

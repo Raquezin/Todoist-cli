@@ -60,6 +60,7 @@ type Duration struct {
 type FilteredTask struct {
 	ID        string    `json:"id"`
 	ProjectID string    `json:"project_id"`
+	SectionID string    `json:"section_id,omitempty"`
 	Content   string    `json:"content"`
 	Priority  int       `json:"priority"`
 	Labels    []string  `json:"labels"`

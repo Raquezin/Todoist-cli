@@ -7,6 +7,10 @@ import (
 
 const ellipsis = "..."
 
+func isUnsafe(r rune) bool {
+	return unicode.IsControl(r) || unicode.Is(unicode.Cf, r)
+}
+
 // Terminal returns a single-line string that cannot emit terminal control
 // sequences when printed.
 func Terminal(s string) string {
@@ -14,12 +18,15 @@ func Terminal(s string) string {
 	s = strings.ReplaceAll(s, "\n", " ")
 	s = strings.ReplaceAll(s, "\r", " ")
 
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
-			return -1
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if isUnsafe(r) {
+			continue
 		}
-		return r
-	}, s)
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // TerminalLimit sanitizes s for terminal output and caps it to max runes.

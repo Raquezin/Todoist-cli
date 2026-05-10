@@ -5,14 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/models"
 	"todoist-cli/internal/sanitize"
 )
-
-const maxDateLen = 35
-const maxContentLen = 500
-const maxLabelLen = 100
-const maxProjectLen = 120
 
 func formatDue(due *models.Due, now time.Time) string {
 	if due == nil {
@@ -56,7 +52,7 @@ func formatDue(due *models.Due, now time.Time) string {
 	}
 
 	if due.String != "" {
-		return sanitize.TerminalLimit(due.String, maxDateLen)
+		return sanitize.TerminalLimit(due.String, limits.MaxDateDisplay)
 	}
 
 	dateVal := due.Datetime
@@ -64,7 +60,7 @@ func formatDue(due *models.Due, now time.Time) string {
 		dateVal = due.Date
 	}
 	if dateVal != "" {
-		return sanitize.TerminalLimit(dateVal, maxDateLen)
+		return sanitize.TerminalLimit(dateVal, limits.MaxDateDisplay)
 	}
 	return "-"
 }
@@ -75,7 +71,7 @@ func formatLabels(labels []string) string {
 	}
 	parts := make([]string, len(labels))
 	for i, l := range labels {
-		parts[i] = "@" + sanitize.TerminalLimit(l, maxLabelLen)
+		parts[i] = "@" + sanitize.TerminalLimit(l, limits.MaxLabelDisplay)
 	}
 	return strings.Join(parts, " ")
 }
@@ -96,8 +92,8 @@ func formatDuration(dur *models.Duration) string {
 
 // FormatTask formats a FilteredTask into a readable string.
 // projectMap maps project IDs to project names.
-func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]string) string {
-	content := sanitize.TerminalLimit(t.Content, maxContentLen)
+func FormatTask(t models.FilteredTask, now time.Time, projectMap, sectionMap map[string]string) string {
+	content := sanitize.TerminalLimit(t.Content, limits.MaxContentDisplay)
 	content = strings.ReplaceAll(content, "|", "¦")
 	content = strings.ReplaceAll(content, "\n", " ")
 	content = strings.ReplaceAll(content, "\r", "")
@@ -108,7 +104,10 @@ func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]stri
 	if project == "" {
 		project = "Inbox"
 	}
-	project = sanitize.TerminalLimit(project, maxProjectLen)
+	project = sanitize.TerminalLimit(project, limits.MaxProjectDisplay)
+
+	section := sectionMap[t.SectionID]
+	section = sanitize.TerminalLimit(section, limits.MaxProjectDisplay)
 
 	labels := formatLabels(t.Labels)
 	duration := formatDuration(t.Duration)
@@ -121,6 +120,10 @@ func FormatTask(t models.FilteredTask, now time.Time, projectMap map[string]stri
 	b.WriteString(priority)
 	b.WriteString(" | ")
 	b.WriteString(project)
+	if section != "" {
+		b.WriteString(" / ")
+		b.WriteString(section)
+	}
 
 	if labels != "" {
 		b.WriteString(" | ")

@@ -2,12 +2,14 @@ package task
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
 	"todoist-cli/internal/cache"
 	"todoist-cli/internal/client"
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/models"
 	"todoist-cli/internal/sanitize"
 )
@@ -15,6 +17,7 @@ import (
 type Creator struct {
 	Client *client.TodoistClient
 	Loc    *time.Location
+	Out    io.Writer
 }
 
 func NewCreator(apiClient *client.TodoistClient) *Creator {
@@ -30,15 +33,15 @@ func NewCreator(apiClient *client.TodoistClient) *Creator {
 		loc = time.Local
 	}
 
-	return &Creator{Client: apiClient, Loc: loc}
+	return &Creator{Client: apiClient, Loc: loc, Out: os.Stdout}
 }
 
 func (c *Creator) Create(name, startStr string, duration int, projectName, sectionName string, labels []string, description string, priority int) error {
-	if len(name) > 500 {
-		return fmt.Errorf("task name exceeds 500 characters")
+	if len(name) > limits.MaxTaskName {
+		return fmt.Errorf("task name exceeds %d characters", limits.MaxTaskName)
 	}
-	if len(description) > 15000 {
-		return fmt.Errorf("task description exceeds 15000 characters")
+	if len(description) > limits.MaxTaskDescription {
+		return fmt.Errorf("task description exceeds %d characters", limits.MaxTaskDescription)
 	}
 
 	startStr = strings.TrimSpace(startStr)
@@ -98,12 +101,12 @@ func (c *Creator) Create(name, startStr string, duration int, projectName, secti
 
 	projectID := cache.GetProjectID(c.Client, projectName)
 	if projectID == "" && projectName != "" {
-		fmt.Printf("⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
+		fmt.Fprintf(c.Out, "⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
 	}
 
 	sectionID := cache.GetSectionID(c.Client, sectionName, projectID)
 	if sectionID == "" && sectionName != "" {
-		fmt.Printf("⚠️ Warning: Section '%s' not found.\n", sanitize.TerminalLimit(sectionName, 120))
+		fmt.Fprintf(c.Out, "⚠️ Warning: Section '%s' not found.\n", sanitize.TerminalLimit(sectionName, 120))
 	}
 
 	taskReq := models.TaskRequest{
@@ -130,7 +133,7 @@ func (c *Creator) Create(name, startStr string, duration int, projectName, secti
 		return fmt.Errorf("failed to create task: %w", err)
 	}
 
-	fmt.Println("✅ Task created successfully!")
-	fmt.Printf("   Title: %s\n", sanitize.TerminalLimit(taskRes.Content, 500))
+	fmt.Fprintln(c.Out, "✅ Task created successfully!")
+	fmt.Fprintf(c.Out, "   Title: %s\n", sanitize.TerminalLimit(taskRes.Content, limits.MaxTaskName))
 	return nil
 }

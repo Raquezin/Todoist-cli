@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/models"
 )
 
@@ -177,7 +178,7 @@ func TestFormatTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FormatTask(tt.task, now, projectMap)
+			result := FormatTask(tt.task, now, projectMap, nil)
 			if result != tt.expected {
 				t.Errorf("FormatTask() = %q, want %q", result, tt.expected)
 			}
@@ -216,23 +217,23 @@ func TestFormatDueEdgeCases(t *testing.T) {
 func TestFormatTaskCapsUntrustedFieldLengths(t *testing.T) {
 	now := time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC)
 	projectMap := map[string]string{
-		"proj1": strings.Repeat("p", maxProjectLen+20),
+		"proj1": strings.Repeat("p", limits.MaxProjectDisplay+20),
 	}
 	task := models.FilteredTask{
-		Content:   strings.Repeat("c", maxContentLen+20),
+		Content:   strings.Repeat("c", limits.MaxContentDisplay+20),
 		ProjectID: "proj1",
 		Priority:  4,
-		Labels:    []string{strings.Repeat("l", maxLabelLen+20)},
+		Labels:    []string{strings.Repeat("l", limits.MaxLabelDisplay+20)},
 	}
 
-	got := FormatTask(task, now, projectMap)
-	if strings.Contains(got, strings.Repeat("c", maxContentLen)) {
+	got := FormatTask(task, now, projectMap, nil)
+	if strings.Contains(got, strings.Repeat("c", limits.MaxContentDisplay)) {
 		t.Fatalf("Expected content to be capped, got %q", got)
 	}
-	if strings.Contains(got, strings.Repeat("p", maxProjectLen)) {
+	if strings.Contains(got, strings.Repeat("p", limits.MaxProjectDisplay)) {
 		t.Fatalf("Expected project to be capped, got %q", got)
 	}
-	if strings.Contains(got, strings.Repeat("l", maxLabelLen)) {
+	if strings.Contains(got, strings.Repeat("l", limits.MaxLabelDisplay)) {
 		t.Fatalf("Expected label to be capped, got %q", got)
 	}
 }

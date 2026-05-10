@@ -41,7 +41,7 @@ func TestFetcherFetch(t *testing.T) {
 	f := NewFetcher(apiClient)
 
 	// Will fetch preset "foco"
-	err := f.Fetch("foco")
+	err := f.Fetch("foco", false)
 	if err != nil {
 		t.Fatalf("Fetch failed: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestFetcherFetch(t *testing.T) {
 	apiClientEmpty.BaseURL = tsEmpty.URL
 	fEmpty := NewFetcher(apiClientEmpty)
 
-	err = fEmpty.Fetch("custom query")
+	err = fEmpty.Fetch("custom query", false)
 	if err != nil {
 		t.Fatalf("Fetch empty failed: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestFetcherPaginationLimit(t *testing.T) {
 	f := NewFetcher(apiClient)
 
 	// Should stop after maxPages (20)
-	err := f.Fetch("custom")
+	err := f.Fetch("custom", false)
 	if err != nil {
 		t.Fatalf("Fetch failed on pagination limit: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestFetcherAPIError(t *testing.T) {
 	apiClient.BaseURL = ts.URL
 	f := NewFetcher(apiClient)
 
-	err := f.Fetch("custom")
+	err := f.Fetch("custom", false)
 	if err == nil {
 		t.Fatal("Expected error from Fetch due to API failure")
 	}

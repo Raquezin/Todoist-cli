@@ -1,8 +1,10 @@
 package task
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -14,9 +16,17 @@ import (
 	"todoist-cli/internal/sanitize"
 )
 
-const exclusionGlobal = "& !(#Study & /Horario)"
+const exclusionGlobalDefault = "& !(#Study & /Horario)"
 const maxPages = 20
+const fetchTimeout = 120 * time.Second
 const presetsFile = ".cache/presets.json"
+
+func exclusionFilter() string {
+	if env := os.Getenv("TODOIST_EXCLUDE_FILTER"); env != "" {
+		return env
+	}
+	return exclusionGlobalDefault
+}
 
 var builtinQueries = map[string]string{
 	"foco":  "today & p1 & !@reuniones",
@@ -198,15 +208,54 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
+func outputJSON(w io.Writer, tasks []models.FilteredTask, projectMap, sectionMap map[string]string) error {
+	type jsonTask struct {
+		Content   string   `json:"content"`
+		Project   string   `json:"project"`
+		Section   string   `json:"section,omitempty"`
+		Priority  int      `json:"priority"`
+		Labels    []string `json:"labels,omitempty"`
+		DueDate   string   `json:"due_date,omitempty"`
+		DueString string   `json:"due_string,omitempty"`
+	}
+
+	out := make([]jsonTask, 0, len(tasks))
+	for _, t := range tasks {
+		jt := jsonTask{
+			Content:  t.Content,
+			Project:  projectMap[t.ProjectID],
+			Section:  sectionMap[t.SectionID],
+			Priority: models.ToUIPriority(t.Priority),
+			Labels:   t.Labels,
+		}
+		if t.Due != nil {
+			jt.DueDate = t.Due.Date
+			jt.DueString = t.Due.String
+		}
+		if jt.Project == "" {
+			jt.Project = "Inbox"
+		}
+		out = append(out, jt)
+	}
+
+	bytes, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal tasks: %w", err)
+	}
+	fmt.Fprintln(w, string(bytes))
+	return nil
+}
+
 type Fetcher struct {
 	Client *client.TodoistClient
+	Out    io.Writer
 }
 
 func NewFetcher(apiClient *client.TodoistClient) *Fetcher {
-	return &Fetcher{Client: apiClient}
+	return &Fetcher{Client: apiClient, Out: os.Stdout}
 }
 
-func (f *Fetcher) Fetch(queryName string) error {
+func (f *Fetcher) Fetch(queryName string, jsonOut bool) error {
 	presets := LoadPresets()
 	queryBase, exists := presets[queryName]
 	if !exists {
@@ -215,25 +264,31 @@ func (f *Fetcher) Fetch(queryName string) error {
 
 	var queryFinal string
 	if exists {
-		queryFinal = fmt.Sprintf("(%s) %s", queryBase, exclusionGlobal)
-		fmt.Printf("\n🔍 Executing preset: [%s]\n", sanitize.Terminal(queryName))
+		queryFinal = fmt.Sprintf("(%s) %s", queryBase, exclusionFilter())
+		fmt.Fprintf(f.Out, "\n🔍 Executing preset: [%s]\n", sanitize.Terminal(queryName))
 	} else {
 		queryFinal = queryBase
-		fmt.Printf("\n🔍 Executing custom filter\n")
+		fmt.Fprintf(f.Out, "\n🔍 Executing custom filter\n")
 	}
-	fmt.Printf("💻 Sent query: %s\n", sanitize.Terminal(queryFinal))
+	fmt.Fprintf(f.Out, "💻 Sent query: %s\n", sanitize.Terminal(queryFinal))
+
+	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
+	defer cancel()
 
 	var allTasks []models.FilteredTask
 	cursor := ""
 	pageCount := 0
 
 	for {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("fetch timed out or was cancelled after %v: %w", fetchTimeout, err)
+		}
 		if pageCount >= maxPages {
-			fmt.Printf("⚠️ Warning: Reached maximum pagination limit (%d pages). Some tasks might be missing.\n", maxPages)
+			fmt.Fprintf(f.Out, "⚠️ Warning: Reached maximum pagination limit (%d pages). Some tasks might be missing.\n", maxPages)
 			break
 		}
 
-		apiResp, err := f.Client.FilterTasks(queryFinal, cursor)
+		apiResp, err := f.Client.FilterTasks(ctx, queryFinal, cursor)
 		if err != nil {
 			return err
 		}
@@ -248,17 +303,28 @@ func (f *Fetcher) Fetch(queryName string) error {
 	}
 
 	if len(allTasks) == 0 {
-		fmt.Println("   🤷‍♂️ Inbox zero. No tasks found for this filter.")
+		fmt.Fprintln(f.Out, "   🤷‍♂️ Inbox zero. No tasks found for this filter.")
 		return nil
 	}
 
-	fmt.Printf("   🎯 Found %d tasks:\n", len(allTasks))
+	fmt.Fprintf(f.Out, "   🎯 Found %d tasks:\n", len(allTasks))
 
 	idToName := cache.GetAllCachedProjects()
+	sectionIDToName, err := cache.GetSectionMap(f.Client)
+	if err != nil {
+		fmt.Fprintf(f.Out, "⚠️ Warning: Failed to fetch section map: %s\n", sanitize.Terminal(err.Error()))
+	}
+
+	if jsonOut {
+		if err := outputJSON(f.Out, allTasks, idToName, sectionIDToName); err != nil {
+			return err
+		}
+		return nil
+	}
 
 	now := time.Now()
 	for _, t := range allTasks {
-		fmt.Printf("      %s\n", FormatTask(t, now, idToName))
+		fmt.Fprintf(f.Out, "      %s\n", FormatTask(t, now, idToName, sectionIDToName))
 	}
 
 	return nil

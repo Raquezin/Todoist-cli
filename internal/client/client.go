@@ -2,9 +2,11 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/models"
 	"todoist-cli/internal/sanitize"
 )
@@ -34,10 +37,17 @@ func New(token string) *TodoistClient {
 	}
 }
 
-const (
-	maxErrorBodyBytes = 4096
-	maxRetryAfter     = 5 * time.Second
-)
+const maxRetryAfter = 5 * time.Second
+
+func isLoopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
 
 func validateBaseURL(baseURL string) error {
 	parsed, err := url.Parse(baseURL)
@@ -52,7 +62,7 @@ func validateBaseURL(baseURL string) error {
 	}
 	if parsed.Scheme == "http" {
 		host := parsed.Hostname()
-		if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+		if !isLoopback(host) {
 			return fmt.Errorf("refusing to send API token over insecure HTTP to %s", host)
 		}
 	}
@@ -60,7 +70,7 @@ func validateBaseURL(baseURL string) error {
 }
 
 // doRequest performs the HTTP request, handles errors, and unmarshals the response into target.
-func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target any) error {
+func (c *TodoistClient) doRequest(ctx context.Context, method, endpoint string, reqBody any, target any) error {
 	if err := validateBaseURL(c.BaseURL); err != nil {
 		return err
 	}
@@ -79,12 +89,15 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 
 	var resp *http.Response
 	for retries := 0; retries < 3; retries++ {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("request cancelled: %w", err)
+		}
 		var bodyReader io.Reader
 		if reqBytes != nil {
 			bodyReader = bytes.NewBuffer(reqBytes)
 		}
 
-		req, err := http.NewRequest(method, fullURL, bodyReader)
+		req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
 		if err != nil {
 			return err
 		}
@@ -129,10 +142,10 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes+1))
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, limits.MaxErrorBodyBytes+1))
 		body := string(bodyBytes)
-		if len(bodyBytes) > maxErrorBodyBytes {
-			body = sanitize.TerminalLimit(body, maxErrorBodyBytes)
+		if len(bodyBytes) > limits.MaxErrorBodyBytes {
+			body = sanitize.TerminalLimit(body, limits.MaxErrorBodyBytes)
 		} else {
 			body = sanitize.Terminal(body)
 		}
@@ -149,7 +162,7 @@ func (c *TodoistClient) doRequest(method, endpoint string, reqBody any, target a
 
 func (c *TodoistClient) GetProjects() ([]models.Project, error) {
 	var projectsResp models.ProjectsResponse
-	if err := c.doRequest("GET", "/projects", nil, &projectsResp); err != nil {
+	if err := c.doRequest(context.Background(), "GET", "/projects", nil, &projectsResp); err != nil {
 		return nil, err
 	}
 	return projectsResp.Results, nil
@@ -157,7 +170,7 @@ func (c *TodoistClient) GetProjects() ([]models.Project, error) {
 
 func (c *TodoistClient) GetSections() ([]models.Section, error) {
 	var sectionsResp models.SectionsResponse
-	if err := c.doRequest("GET", "/sections", nil, &sectionsResp); err != nil {
+	if err := c.doRequest(context.Background(), "GET", "/sections", nil, &sectionsResp); err != nil {
 		return nil, err
 	}
 	return sectionsResp.Results, nil
@@ -165,13 +178,13 @@ func (c *TodoistClient) GetSections() ([]models.Section, error) {
 
 func (c *TodoistClient) CreateTask(task models.TaskRequest) (*models.TaskResponse, error) {
 	var taskRes models.TaskResponse
-	if err := c.doRequest("POST", "/tasks", task, &taskRes); err != nil {
+	if err := c.doRequest(context.Background(), "POST", "/tasks", task, &taskRes); err != nil {
 		return nil, err
 	}
 	return &taskRes, nil
 }
 
-func (c *TodoistClient) FilterTasks(queryFinal, cursor string) (*models.FilterResponse, error) {
+func (c *TodoistClient) FilterTasks(ctx context.Context, queryFinal, cursor string) (*models.FilterResponse, error) {
 	params := url.Values{}
 	params.Add("query", queryFinal)
 	if cursor != "" {
@@ -180,7 +193,7 @@ func (c *TodoistClient) FilterTasks(queryFinal, cursor string) (*models.FilterRe
 
 	endpoint := "/tasks/filter?" + params.Encode()
 	var apiResp models.FilterResponse
-	if err := c.doRequest("GET", endpoint, nil, &apiResp); err != nil {
+	if err := c.doRequest(ctx, "GET", endpoint, nil, &apiResp); err != nil {
 		return nil, err
 	}
 	return &apiResp, nil

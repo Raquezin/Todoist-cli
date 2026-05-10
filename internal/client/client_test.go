@@ -1,11 +1,14 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"todoist-cli/internal/limits"
 	"todoist-cli/internal/models"
 )
 
@@ -97,7 +100,7 @@ func TestFilterTasks(t *testing.T) {
 	client := New("fake-token")
 	client.BaseURL = ts.URL
 
-	res, err := client.FilterTasks("today", "cursor123")
+	res, err := client.FilterTasks(context.Background(), "today", "cursor123")
 	if err != nil {
 		t.Fatalf("FilterTasks failed: %v", err)
 	}
@@ -134,7 +137,7 @@ func TestDoRequestErrors(t *testing.T) {
 		}
 		if r.URL.Path == "/large-error" {
 			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(strings.Repeat("a", maxErrorBodyBytes+128)))
+			_, _ = w.Write([]byte(strings.Repeat("a", limits.MaxErrorBodyBytes+128)))
 			return
 		}
 	}))
@@ -144,40 +147,40 @@ func TestDoRequestErrors(t *testing.T) {
 	client.BaseURL = ts.URL
 
 	// Test HTTP Error directly on FilterTasks
-	_, err := client.FilterTasks("test", "")
+	_, err := client.FilterTasks(context.Background(), "test", "")
 	if err == nil || err.Error() != "API error (403): {\"error\":\"Forbidden\"}" {
 		t.Errorf("Expected 403 error, got %v", err)
 	}
 
 	// Test specific error path
-	err = client.doRequest("GET", "/error", nil, nil)
+	err = client.doRequest(context.Background(), "GET", "/error", nil, nil)
 	if err == nil || err.Error() != "API error (401): {\"error\":\"Unauthorized\"}" {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
 	// Test bad json response
 	var dummy struct{}
-	err = client.doRequest("GET", "/badjson", nil, &dummy)
+	err = client.doRequest(context.Background(), "GET", "/badjson", nil, &dummy)
 	if err == nil {
 		t.Fatal("Expected JSON decode error")
 	}
 
-	err = client.doRequest("GET", "/terminal-control", nil, nil)
+	err = client.doRequest(context.Background(), "GET", "/terminal-control", nil, nil)
 	if err == nil || strings.ContainsAny(err.Error(), "\x1b\n\r") {
 		t.Fatalf("Expected sanitized API error, got %q", err)
 	}
 
-	err = client.doRequest("GET", "/large-error", nil, nil)
+	err = client.doRequest(context.Background(), "GET", "/large-error", nil, nil)
 	if err == nil {
 		t.Fatal("Expected large API error")
 	}
-	if len(err.Error()) > maxErrorBodyBytes+64 || !strings.HasSuffix(err.Error(), "...") {
+	if len(err.Error()) > limits.MaxErrorBodyBytes+64 || !strings.HasSuffix(err.Error(), "...") {
 		t.Fatalf("Expected capped API error, got length %d and error %q", len(err.Error()), err)
 	}
 
 	// Test bad URL
 	client.BaseURL = "http://invalid-url-\x00"
-	err = client.doRequest("GET", "/test", nil, nil)
+	err = client.doRequest(context.Background(), "GET", "/test", nil, nil)
 	if err == nil {
 		t.Fatal("Expected request build error")
 	}
@@ -200,6 +203,7 @@ func TestValidateBaseURLAllowsLocalHTTPAndHTTPS(t *testing.T) {
 	for _, baseURL := range []string{
 		"http://127.0.0.1:8080/api",
 		"http://localhost:8080/api",
+		"http://[::1]:8080/api",
 		"https://api.todoist.com/api/v1",
 	} {
 		if err := validateBaseURL(baseURL); err != nil {
