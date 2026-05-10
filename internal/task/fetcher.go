@@ -166,19 +166,19 @@ func DeletePreset(name string) error {
 		return fmt.Errorf("preset name is required")
 	}
 	if _, isBuiltin := builtinQueries[name]; isBuiltin {
-		return fmt.Errorf("'%s' is a built-in preset and cannot be deleted. Use 'edit' to override it.", name)
+		return fmt.Errorf("'%s' is a built-in preset and cannot be deleted — use 'edit' to override it", name)
 	}
 
 	user, err := loadUserPresets()
 	if os.IsNotExist(err) {
-		return fmt.Errorf("preset '%s' not found.", name)
+		return fmt.Errorf("preset '%s' not found", name)
 	}
 	if err != nil {
 		return err
 	}
 
 	if _, exists := user[name]; !exists {
-		return fmt.Errorf("preset '%s' not found.", name)
+		return fmt.Errorf("preset '%s' not found", name)
 	}
 
 	delete(user, name)
