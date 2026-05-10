@@ -219,6 +219,7 @@ func outputJSON(w io.Writer, tasks []models.FilteredTask, projectMap, sectionMap
 		DueString string   `json:"due_string,omitempty"`
 	}
 
+	now := time.Now()
 	out := make([]jsonTask, 0, len(tasks))
 	for _, t := range tasks {
 		jt := jsonTask{
@@ -229,8 +230,12 @@ func outputJSON(w io.Writer, tasks []models.FilteredTask, projectMap, sectionMap
 			Labels:   t.Labels,
 		}
 		if t.Due != nil {
-			jt.DueDate = t.Due.Date
-			jt.DueString = t.Due.String
+			if t.Due.Datetime != "" {
+				jt.DueDate = t.Due.Datetime
+			} else {
+				jt.DueDate = t.Due.Date
+			}
+			jt.DueString = formatDue(t.Due, now)
 		}
 		if jt.Project == "" {
 			jt.Project = "Inbox"

@@ -27,9 +27,12 @@ func formatDue(due *models.Due, now time.Time) string {
 	}
 
 	if (err != nil || due.Datetime == "") && due.Date != "" {
-		parsed, err = time.Parse("2006-01-02", due.Date)
-		if err == nil {
-			hasTime = false
+		for _, f := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04:05Z", "2006-01-02"} {
+			parsed, err = time.ParseInLocation(f, due.Date, now.Location())
+			if err == nil {
+				hasTime = f != "2006-01-02"
+				break
+			}
 		}
 	}
 
