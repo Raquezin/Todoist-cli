@@ -318,7 +318,7 @@ func GetSectionMap(apiClient *client.TodoistClient) (map[string]string, error) {
 	}
 
 	if cacheBytes, err := json.MarshalIndent(freshData, "", "    "); err == nil {
-		atomicWrite(SectionCacheFile, cacheBytes)
+		_ = atomicWrite(SectionCacheFile, cacheBytes)
 	}
 
 	storeMemSection(freshData)

@@ -242,7 +242,7 @@ func outputJSON(w io.Writer, tasks []models.FilteredTask, projectMap, sectionMap
 	if err != nil {
 		return fmt.Errorf("failed to marshal tasks: %w", err)
 	}
-	fmt.Fprintln(w, string(bytes))
+	_, _ = fmt.Fprintln(w, string(bytes))
 	return nil
 }
 
@@ -265,12 +265,12 @@ func (f *Fetcher) Fetch(queryName string, jsonOut bool) error {
 	var queryFinal string
 	if exists {
 		queryFinal = fmt.Sprintf("(%s) %s", queryBase, exclusionFilter())
-		fmt.Fprintf(f.Out, "\n🔍 Executing preset: [%s]\n", sanitize.Terminal(queryName))
+		_, _ = fmt.Fprintf(f.Out, "\n🔍 Executing preset: [%s]\n", sanitize.Terminal(queryName))
 	} else {
 		queryFinal = queryBase
-		fmt.Fprintf(f.Out, "\n🔍 Executing custom filter\n")
+		_, _ = fmt.Fprintf(f.Out, "\n🔍 Executing custom filter\n")
 	}
-	fmt.Fprintf(f.Out, "💻 Sent query: %s\n", sanitize.Terminal(queryFinal))
+	_, _ = fmt.Fprintf(f.Out, "💻 Sent query: %s\n", sanitize.Terminal(queryFinal))
 
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
 	defer cancel()
@@ -284,7 +284,7 @@ func (f *Fetcher) Fetch(queryName string, jsonOut bool) error {
 			return fmt.Errorf("fetch timed out or was cancelled after %v: %w", fetchTimeout, err)
 		}
 		if pageCount >= maxPages {
-			fmt.Fprintf(f.Out, "⚠️ Warning: Reached maximum pagination limit (%d pages). Some tasks might be missing.\n", maxPages)
+			_, _ = fmt.Fprintf(f.Out, "⚠️ Warning: Reached maximum pagination limit (%d pages). Some tasks might be missing.\n", maxPages)
 			break
 		}
 
@@ -303,16 +303,16 @@ func (f *Fetcher) Fetch(queryName string, jsonOut bool) error {
 	}
 
 	if len(allTasks) == 0 {
-		fmt.Fprintln(f.Out, "   🤷‍♂️ Inbox zero. No tasks found for this filter.")
+		_, _ = fmt.Fprintln(f.Out, "   🤷‍♂️ Inbox zero. No tasks found for this filter.")
 		return nil
 	}
 
-	fmt.Fprintf(f.Out, "   🎯 Found %d tasks:\n", len(allTasks))
+	_, _ = fmt.Fprintf(f.Out, "   🎯 Found %d tasks:\n", len(allTasks))
 
 	idToName := cache.GetAllCachedProjects()
 	sectionIDToName, err := cache.GetSectionMap(f.Client)
 	if err != nil {
-		fmt.Fprintf(f.Out, "⚠️ Warning: Failed to fetch section map: %s\n", sanitize.Terminal(err.Error()))
+		_, _ = fmt.Fprintf(f.Out, "⚠️ Warning: Failed to fetch section map: %s\n", sanitize.Terminal(err.Error()))
 	}
 
 	if jsonOut {
@@ -324,7 +324,7 @@ func (f *Fetcher) Fetch(queryName string, jsonOut bool) error {
 
 	now := time.Now()
 	for _, t := range allTasks {
-		fmt.Fprintf(f.Out, "      %s\n", FormatTask(t, now, idToName, sectionIDToName))
+		_, _ = fmt.Fprintf(f.Out, "      %s\n", FormatTask(t, now, idToName, sectionIDToName))
 	}
 
 	return nil

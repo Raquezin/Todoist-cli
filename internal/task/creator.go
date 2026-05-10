@@ -101,12 +101,12 @@ func (c *Creator) Create(name, startStr string, duration int, projectName, secti
 
 	projectID := cache.GetProjectID(c.Client, projectName)
 	if projectID == "" && projectName != "" {
-		fmt.Fprintf(c.Out, "⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
+		_, _ = fmt.Fprintf(c.Out, "⚠️ Warning: Project '%s' not found. Using Inbox.\n", sanitize.TerminalLimit(projectName, 120))
 	}
 
 	sectionID := cache.GetSectionID(c.Client, sectionName, projectID)
 	if sectionID == "" && sectionName != "" {
-		fmt.Fprintf(c.Out, "⚠️ Warning: Section '%s' not found.\n", sanitize.TerminalLimit(sectionName, 120))
+		_, _ = fmt.Fprintf(c.Out, "⚠️ Warning: Section '%s' not found.\n", sanitize.TerminalLimit(sectionName, 120))
 	}
 
 	taskReq := models.TaskRequest{
@@ -133,7 +133,7 @@ func (c *Creator) Create(name, startStr string, duration int, projectName, secti
 		return fmt.Errorf("failed to create task: %w", err)
 	}
 
-	fmt.Fprintln(c.Out, "✅ Task created successfully!")
-	fmt.Fprintf(c.Out, "   Title: %s\n", sanitize.TerminalLimit(taskRes.Content, limits.MaxTaskName))
+	_, _ = fmt.Fprintln(c.Out, "✅ Task created successfully!")
+	_, _ = fmt.Fprintf(c.Out, "   Title: %s\n", sanitize.TerminalLimit(taskRes.Content, limits.MaxTaskName))
 	return nil
 }
