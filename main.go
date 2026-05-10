@@ -21,6 +21,7 @@ USAGE:
 AVAILABLE COMMANDS:
   create    Create a new task in Todoist with Calendar-friendly formatting
   fetch     Fetch tasks using presets or raw Todoist filters
+  presets   List or manage fetch presets
   help      Show this help message
 
 EXAMPLES:
@@ -36,6 +37,14 @@ EXAMPLES:
 3. Fetch tasks (Raw Todoist Filter):
    ./todoist-cli fetch "today & #Work"
    ./todoist-cli fetch "p1 & overdue"
+
+4. Manage presets:
+   ./todoist-cli presets                  # List all active presets
+   ./todoist-cli presets init             # Generate defaults in .cache/presets.json
+   ./todoist-cli presets add <name> <q>   # Add a preset
+   ./todoist-cli presets edit <name> <q>  # Edit a preset
+   ./todoist-cli presets delete <name>    # Delete a preset
+   ./todoist-cli presets help             # Show presets usage
 
 For more details, check the README.md file.`)
 }
@@ -62,11 +71,16 @@ func run() error {
 		return nil
 	}
 
+	command := os.Args[1]
+
+	if command == "presets" {
+		return handlePresets()
+	}
+
 	if token == "" {
 		return fmt.Errorf("TODOIST_API_TOKEN not found in environment or .env file")
 	}
 
-	command := os.Args[1]
 	todoistClient := client.New(token)
 
 	switch command {
@@ -120,7 +134,7 @@ func run() error {
 
 	case "fetch":
 		if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
-			fmt.Println("USAGE:\n  ./todoist-cli fetch <preset|filter>\n\nEXAMPLES:\n  ./todoist-cli fetch foco\n  ./todoist-cli fetch \"today & #Work\"")
+			fmt.Println("USAGE:\n  ./todoist-cli fetch <preset|filter>\n\nPRESETS:\n  Use './todoist-cli presets' to list available presets.\n\nEXAMPLES:\n  ./todoist-cli fetch foco\n  ./todoist-cli fetch \"today & #Work\"")
 			return nil
 		}
 		if len(os.Args) < 3 {
@@ -140,6 +154,51 @@ func run() error {
 		return fmt.Errorf("command '%s' not recognized", command)
 	}
 
+	return nil
+}
+
+func handlePresets() error {
+	if len(os.Args) > 2 && (os.Args[2] == "help" || os.Args[2] == "--help" || os.Args[2] == "-h" || os.Args[2] == "-help") {
+		fmt.Println(`USAGE:
+  ./todoist-cli presets                  List all active presets
+  ./todoist-cli presets init             Generate defaults in .cache/presets.json
+  ./todoist-cli presets add <name> <q>   Add a preset
+  ./todoist-cli presets edit <name> <q>  Edit or override a preset
+  ./todoist-cli presets delete <name>    Delete a preset
+  ./todoist-cli presets help             Show this message
+
+Built-in presets (foco, radar) cannot be deleted, only overridden with 'edit'.`)
+		return nil
+	}
+
+	action := ""
+	if len(os.Args) >= 3 {
+		action = os.Args[2]
+	}
+
+	switch action {
+	case "":
+		task.ListPresets()
+	case "init":
+		return task.InitPresets()
+	case "add":
+		if len(os.Args) < 5 {
+			return fmt.Errorf("usage: presets add <name> <query>")
+		}
+		return task.AddPreset(os.Args[3], strings.Join(os.Args[4:], " "))
+	case "edit":
+		if len(os.Args) < 5 {
+			return fmt.Errorf("usage: presets edit <name> <query>")
+		}
+		return task.EditPreset(os.Args[3], strings.Join(os.Args[4:], " "))
+	case "delete":
+		if len(os.Args) < 4 {
+			return fmt.Errorf("usage: presets delete <name>")
+		}
+		return task.DeletePreset(os.Args[3])
+	default:
+		return fmt.Errorf("unknown presets action '%s'. Use: list | add | edit | delete | init | help", action)
+	}
 	return nil
 }
 
