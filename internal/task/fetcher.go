@@ -90,7 +90,7 @@ func ListPresets() {
 
 func InitPresets() error {
 	if _, err := os.Stat(presetsFile); err == nil {
-		return fmt.Errorf("%s already exists. Delete it first or use 'edit' to modify.", presetsFile)
+		return fmt.Errorf("%s already exists — delete it first or use 'edit' to modify", presetsFile)
 	}
 	if err := saveUserPresets(builtinQueries); err != nil {
 		return err
@@ -109,7 +109,7 @@ func AddPreset(name, query string) error {
 		return fmt.Errorf("preset name is required")
 	}
 	if _, isBuiltin := builtinQueries[name]; isBuiltin {
-		return fmt.Errorf("'%s' is a built-in preset. Use 'edit' to override it.", name)
+		return fmt.Errorf("'%s' is a built-in preset — use 'edit' to override it", name)
 	}
 
 	user, _ := loadUserPresets()
@@ -117,7 +117,7 @@ func AddPreset(name, query string) error {
 		user = make(map[string]string)
 	}
 	if _, exists := user[name]; exists {
-		return fmt.Errorf("preset '%s' already exists. Use 'edit' to change it.", name)
+		return fmt.Errorf("preset '%s' already exists — use 'edit' to change it", name)
 	}
 
 	user[name] = query
